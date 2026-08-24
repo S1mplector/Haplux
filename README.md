@@ -34,7 +34,8 @@ The current prototype can:
 - calculate a coordinate-independent GA4GH refget identifier for the model input sequence;
 - convert a 1-based VCF position into a 0-based internal interval;
 - verify that the declared reference allele matches the sequence;
-- apply a small variant and emit a machine-readable result.
+- apply a small variant and emit a versioned, machine-readable result;
+- run the complete scientific analysis without opening the TUI.
 
 ## Run the TUI
 
@@ -58,11 +59,34 @@ The TUI opens with a worked example. Edit any field and press **Analyze** or
 The VCF position field is 1-based. Window starts and all internal coordinates are
 0-based interbase coordinates; the result panel makes that conversion visible.
 
+## Run headlessly
+
+Use the same analysis engine without opening the interface:
+
+```sh
+.venv/bin/pancontext analyze \
+  --source-type linear_reference \
+  --source-name GRCh38 \
+  --sequence-id chr1 \
+  --window-start 100 \
+  --sequence AACCGG \
+  --position 103 \
+  --ref C \
+  --alt T \
+  --pretty
+```
+
+The command writes a `pancontext.analysis.v1` JSON report. Validation failures use standard
+error and exit code `2`, allowing scripts to stop on scientifically invalid input.
+
 Run the test suite with:
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -v
+make check
 ```
+
+See [`docs/testing.md`](docs/testing.md) for the headless testing contract and manual-only
+boundary.
 
 ## Repository map
 
@@ -71,6 +95,7 @@ src/pancontext/       scientific domain layer and terminal interface
 tests/                executable behavior specifications
 docs/notes/           bioinformatics learning notes
 docs/decisions/       architectural decisions and invariants
+docs/testing.md       automated testing policy and commands
 ```
 
 ## Learning trail

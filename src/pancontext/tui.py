@@ -1,6 +1,4 @@
-"""Textual workspace for inspecting variants and coordinate conversions."""
-
-from typing import Tuple
+"""Textual renderer for the headless PanContext analysis service."""
 
 from rich.console import Group
 from rich.text import Text
@@ -8,13 +6,8 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Button, DataTable, Footer, Header, Input, Label, Select, Static
 
-from pancontext.context import ContextSource, SequenceContext, SequenceProvenance
-from pancontext.domain import (
-    HaplotypeWindow,
-    ReferenceMismatchError,
-    SequenceValidationError,
-    Variant,
-)
+from pancontext.analysis import AnalysisRequest, AnalysisResult, analyze_variant
+from pancontext.context import ContextSource
 
 
 EXAMPLE = {
@@ -124,9 +117,8 @@ class PanContextApp(App[None]):
     def action_analyze(self) -> None:
         status = self.query_one("#status", Static)
         try:
-            context, variant = self._read_workspace()
-            alternate_sequence = variant.apply_to(context.window)
-        except (SequenceValidationError, ReferenceMismatchError, ValueError) as error:
+            result = analyze_variant(self._read_request())
+        except ValueError as error:
             status.remove_class("success")
             status.add_class("error")
             status.update(f"Validation failed: {error}")
@@ -135,79 +127,32 @@ class PanContextApp(App[None]):
 
         status.remove_class("error")
         status.add_class("success")
-        status.update(
-            f"Validated: {self._variant_kind(variant)} from "
-            f"{context.provenance.source_type.label} on "
-            f"{variant.sequence_id}:[{variant.start}, {variant.end})"
-        )
-        self._update_coordinate_table(context, variant)
-        self.query_one("#preview", Static).update(
-            self._sequence_preview(context.window, variant, alternate_sequence)
-        )
+        status.update(result.status_text)
+        self._update_coordinate_table(result)
+        self.query_one("#preview", Static).update(self._sequence_preview(result))
         self.query_one("#interpretation", Static).update(
-            "[b]Interpretation[/b]\n"
-            f"The VCF position {variant.start + 1} becomes internal start "
-            f"{variant.start}. The declared REF allele matches the supplied window, "
-            f"so this sequence replacement is safe to pass to later model adapters. "
-            f"The model input is content-addressed as {context.content_id}; its source "
-            f"remains {context.provenance.source_name}."
+            f"[b]Interpretation[/b]\n{result.interpretation}"
         )
 
-    def _read_workspace(self) -> Tuple[SequenceContext, Variant]:
+    def _read_request(self) -> AnalysisRequest:
         source_value = self.query_one("#source-type", Select).value
         if source_value is Select.NULL:
-            raise SequenceValidationError("context source type must be selected")
-        source_name = self.query_one("#source-name", Input).value
-        sequence_id = self.query_one("#sequence-id", Input).value
-        window_start = int(self.query_one("#window-start", Input).value)
-        sequence = self.query_one("#sequence", Input).value
-        vcf_position = int(self.query_one("#vcf-position", Input).value)
-        reference = self.query_one("#reference", Input).value
-        alternate = self.query_one("#alternate", Input).value
+            raise ValueError("context source type must be selected")
+        return AnalysisRequest(
+            source_type=ContextSource(str(source_value)),
+            source_name=self.query_one("#source-name", Input).value,
+            sequence_id=self.query_one("#sequence-id", Input).value,
+            window_start=int(self.query_one("#window-start", Input).value),
+            sequence=self.query_one("#sequence", Input).value,
+            vcf_position=int(self.query_one("#vcf-position", Input).value),
+            reference=self.query_one("#reference", Input).value,
+            alternate=self.query_one("#alternate", Input).value,
+        )
 
-        window = HaplotypeWindow(
-            sequence_id=sequence_id,
-            start=window_start,
-            sequence=sequence,
-        )
-        context = SequenceContext(
-            window=window,
-            provenance=SequenceProvenance(
-                source_type=ContextSource(str(source_value)),
-                source_name=source_name,
-            ),
-        )
-        variant = Variant.from_vcf(
-            sequence_id=sequence_id,
-            position=vcf_position,
-            reference=reference,
-            alternate=alternate,
-        )
-        return context, variant
-
-    def _update_coordinate_table(
-        self,
-        context: SequenceContext,
-        variant: Variant,
-    ) -> None:
-        window = context.window
+    def _update_coordinate_table(self, result: AnalysisResult) -> None:
         table = self.query_one("#coordinate-table", DataTable)
         table.clear(columns=False)
-        table.add_rows(
-            [
-                (
-                    "Context source",
-                    context.provenance.source_type.label,
-                    context.provenance.source_name,
-                ),
-                ("Sequence", window.sequence_id, window.sequence_id),
-                ("Window content ID", window.sequence, context.content_id),
-                ("Variant position", str(variant.start + 1), str(variant.start)),
-                ("Variant interval", "VCF POS + REF", f"[{variant.start}, {variant.end})"),
-                ("Window interval", str(window.start), f"[{window.start}, {window.end})"),
-                ("Alleles", f"{variant.reference} to {variant.alternate}", "validated"),
-            ]
-        )
+        table.add_rows(result.coordinate_rows)
 
     def _clear_results(self) -> None:
         self.query_one("#coordinate-table", DataTable).clear(columns=False)
@@ -217,21 +162,10 @@ class PanContextApp(App[None]):
         )
 
     @staticmethod
-    def _variant_kind(variant: Variant) -> str:
-        if len(variant.reference) == len(variant.alternate) == 1:
-            return "single-nucleotide variant"
-        if len(variant.alternate) > len(variant.reference):
-            return "insertion"
-        if len(variant.alternate) < len(variant.reference):
-            return "deletion"
-        return "multi-nucleotide substitution"
-
-    @staticmethod
-    def _sequence_preview(
-        window: HaplotypeWindow,
-        variant: Variant,
-        alternate_sequence: str,
-    ) -> Group:
+    def _sequence_preview(result: AnalysisResult) -> Group:
+        window = result.context.window
+        variant = result.variant
+        alternate_sequence = result.alternate_sequence
         local_start = variant.start - window.start
         local_ref_end = local_start + len(variant.reference)
         local_alt_end = local_start + len(variant.alternate)

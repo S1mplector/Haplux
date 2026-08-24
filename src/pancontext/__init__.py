@@ -1,5 +1,11 @@
 """PanContext: context stability analysis for genomic model predictions."""
 
+from pancontext.analysis import (
+    AnalysisRequest,
+    AnalysisResult,
+    analyze_variant,
+    classify_variant,
+)
 from pancontext.context import (
     ContextSource,
     SequenceContext,
@@ -14,6 +20,8 @@ from pancontext.domain import (
 )
 
 __all__ = [
+    "AnalysisRequest",
+    "AnalysisResult",
     "ContextSource",
     "HaplotypeWindow",
     "ReferenceMismatchError",
@@ -21,6 +29,8 @@ __all__ = [
     "SequenceProvenance",
     "SequenceValidationError",
     "Variant",
+    "analyze_variant",
+    "classify_variant",
     "ga4gh_sequence_id",
 ]
 

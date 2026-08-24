@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-pancontext = "pancontext.tui:run"
+pancontext = "pancontext.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

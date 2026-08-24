@@ -1,7 +1,7 @@
-"""Run the PanContext terminal interface with ``python -m pancontext``."""
+"""Run PanContext with ``python -m pancontext``."""
 
-from pancontext.tui import run
+from pancontext.cli import main
 
 
 if __name__ == "__main__":
-    run()
+    raise SystemExit(main())
