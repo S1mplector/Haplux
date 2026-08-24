@@ -3,43 +3,96 @@ Screen {
     color: #d6d7d9;
 }
 
-Header {
-    background: #1a1b1e;
-    color: #f0f0f0;
-}
-
+Header,
 Footer {
     background: #1a1b1e;
     color: #d6d7d9;
 }
 
-#workspace {
+TabbedContent {
     height: 1fr;
-    padding: 1 2;
+    padding: 0 1 1 1;
+    background: #111214;
 }
 
-#input-panel,
-#results-panel {
+TabbedContent > ContentTabs {
+    height: 3;
+    background: #17181b;
+    color: #aeb0b4;
+    border-bottom: solid #3d3f44;
+}
+
+ContentTabs Tab {
+    background: #17181b;
+    color: #9fa1a6;
+    padding: 0 3;
+}
+
+ContentTabs Tab.-active {
+    background: #2a2b2f;
+    color: #f1f1f2;
+    text-style: bold;
+}
+
+ContentTabs Underline {
+    color: #8d8f95;
+    background: #17181b;
+}
+
+TabbedContent > ContentSwitcher,
+TabPane {
+    height: 1fr;
+    background: #111214;
+}
+
+TabPane {
+    padding-top: 1;
+}
+
+#experiment-workspace,
+#inspector-workspace {
+    height: 1fr;
+}
+
+.panel {
     border: round #4b4d52;
     background: #191a1d;
     padding: 1 2;
 }
 
+#experiment-controls {
+    width: 31%;
+    min-width: 38;
+    margin-right: 1;
+}
+
+#experiment-results {
+    width: 69%;
+}
+
 #input-panel {
-    width: 40%;
+    width: 39%;
     min-width: 42;
     margin-right: 1;
 }
 
 #results-panel {
-    width: 60%;
+    width: 61%;
 }
 
 .panel-kicker {
     height: 1;
-    color: #e2e2e3;
+    color: #e5e5e6;
     text-style: bold;
     margin-bottom: 1;
+}
+
+.section-label {
+    height: 1;
+    margin-top: 1;
+    margin-bottom: 1;
+    color: #adafb3;
+    text-style: bold;
 }
 
 .field-label {
@@ -96,6 +149,126 @@ Button.-primary:hover {
     background: #66686f;
 }
 
+.button-row {
+    height: auto;
+    margin-top: 1;
+}
+
+.button-row Button {
+    margin-right: 1;
+}
+
+.callout,
+.boundary-note {
+    height: auto;
+    margin-top: 1;
+    padding: 1;
+    color: #bfc0c3;
+    background: #242529;
+    border-left: thick #5f6167;
+}
+
+.boundary-note {
+    color: #a9aaae;
+    background: #1f2023;
+}
+
+#experiment-metadata {
+    height: auto;
+    min-height: 6;
+    padding: 1;
+    color: #d0d1d3;
+    background: #101113;
+    border: round #3d3f44;
+}
+
+#experiment-status,
+#status {
+    height: 3;
+    padding: 1;
+    margin-bottom: 1;
+    background: #242529;
+    border-left: thick #5f6167;
+}
+
+#experiment-status.completed,
+#experiment-status.success,
+#status.success {
+    color: #e3e3e4;
+    border-left: thick #8d8f95;
+}
+
+#experiment-status.partial {
+    color: #e9e9ea;
+    border-left: thick #a8a9ad;
+    background: #292a2e;
+}
+
+#experiment-status.error,
+#status.error {
+    color: #f1f1f2;
+    background: #303135;
+    border-left: thick #c7c8cb;
+}
+
+#metric-row {
+    height: 5;
+    margin-bottom: 1;
+}
+
+.metric-card {
+    width: 1fr;
+    height: 5;
+    padding: 1 2;
+    margin-right: 1;
+    background: #101113;
+    border: round #3d3f44;
+    color: #c9cacc;
+    text-align: center;
+}
+
+.metric-card:last-child {
+    margin-right: 0;
+}
+
+DataTable {
+    background: #131416;
+    color: #d8d9db;
+}
+
+DataTable > .datatable--header {
+    background: #2a2b2f;
+    color: #eeeeef;
+}
+
+DataTable > .datatable--even-row {
+    background: #18191c;
+}
+
+DataTable > .datatable--cursor,
+DataTable:focus > .datatable--cursor {
+    background: #55575d;
+    color: #ffffff;
+    text-style: none;
+}
+
+#experiment-table {
+    height: 1fr;
+    min-height: 10;
+    margin-bottom: 1;
+    border: round #3d3f44;
+}
+
+#skipped-contexts {
+    height: auto;
+    min-height: 3;
+    max-height: 7;
+    padding: 1 2;
+    color: #bfc0c3;
+    background: #242529;
+    overflow-y: auto;
+}
+
 #allele-row {
     height: auto;
 }
@@ -108,45 +281,8 @@ Button.-primary:hover {
     margin-right: 1;
 }
 
-#actions {
-    height: auto;
-    margin-top: 1;
-}
-
-#actions Button {
-    margin-right: 1;
-}
-
-#coordinate-note {
-    height: auto;
-    margin-top: 1;
-    padding: 1;
-    color: #b7b8bb;
-    background: #242529;
-    border-left: thick #5f6167;
-}
-
-#status {
-    height: 3;
-    padding: 1;
-    margin-bottom: 1;
-    background: #242529;
-    border-left: thick #5f6167;
-}
-
-#status.success {
-    color: #e3e3e4;
-    border-left: thick #8d8f95;
-}
-
-#status.error {
-    color: #f1f1f2;
-    background: #303135;
-    border-left: thick #c7c8cb;
-}
-
 #coordinate-table {
-    height: 16;
+    height: 17;
     margin-bottom: 1;
 }
 
@@ -166,21 +302,52 @@ Button.-primary:hover {
     background: #242529;
 }
 
-Screen.-compact #workspace {
+#guide-content {
+    width: 100%;
+    max-width: 110;
+    height: 1fr;
+    padding: 2 4;
+    align-horizontal: center;
+}
+
+#guide-text {
+    height: auto;
+    padding: 2 3;
+    background: #151619;
+    border: round #3d3f44;
+    color: #d0d1d3;
+}
+
+Screen.-compact TabbedContent {
+    padding: 0;
+}
+
+Screen.-compact .panel {
     padding: 0 1;
+}
+
+Screen.-compact #experiment-controls {
+    width: 34%;
+    min-width: 28;
+}
+
+Screen.-compact #experiment-results {
+    width: 66%;
 }
 
 Screen.-compact #input-panel {
     width: 36%;
     min-width: 30;
-    padding: 0 1;
 }
 
 Screen.-compact #results-panel {
     width: 64%;
-    padding: 0 1;
 }
 
 Screen.-compact #coordinate-table {
     height: 15;
+}
+
+Screen.-compact .metric-card {
+    padding: 1;
 }

@@ -1,6 +1,6 @@
 import unittest
 
-from textual.widgets import Button, DataTable, Input, Select, Static
+from textual.widgets import Button, DataTable, Input, Select, Static, TabbedContent
 
 from pancontext.context import ContextSource
 from pancontext.tui import PanContextApp
@@ -11,9 +11,21 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
         app = PanContextApp()
 
         async with app.run_test(size=(80, 24)):
-            status = app.query_one("#status", Static)
-            self.assertIn("Validated", str(status.render()))
+            status = app.query_one("#experiment-status", Static)
+            self.assertIn("Completed", str(status.render()))
             self.assertTrue(app.screen.has_class("-compact"))
+
+    async def test_demo_experiment_is_analyzed_on_mount(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)):
+            tabs = app.query_one("#main-tabs", TabbedContent)
+            table = app.query_one("#experiment-table", DataTable)
+            metadata = app.query_one("#experiment-metadata", Static)
+
+            self.assertEqual(tabs.active, "experiment-tab")
+            self.assertEqual(table.row_count, 3)
+            self.assertIn("three-haplotype-demo", str(metadata.render()))
 
     async def test_example_is_analyzed_on_mount(self) -> None:
         app = PanContextApp()
@@ -29,6 +41,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
         app = PanContextApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
+            app.query_one("#main-tabs", TabbedContent).active = "inspector-tab"
             app.query_one("#source-type", Select).value = ContextSource.DE_NOVO_ASSEMBLY.value
             app.query_one("#source-name", Input).value = "sample-assembly-v1"
             await pilot.press("ctrl+r")
@@ -43,6 +56,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
         app = PanContextApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
+            app.query_one("#main-tabs", TabbedContent).active = "inspector-tab"
             app.query_one("#reference", Input).value = "G"
             await pilot.press("ctrl+r")
             await pilot.pause()
@@ -65,6 +79,35 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertIn(
                 "Validated",
+                str(app.query_one("#status", Static).render()),
+            )
+
+    async def test_experiment_file_error_is_rendered_without_crashing(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(120, 40)) as pilot:
+            app.query_one("#experiment-path", Input).value = "/not/a/real/experiment.json"
+            app.query_one("#run-experiment", Button).press()
+            await pilot.pause()
+
+            status = app.query_one("#experiment-status", Static)
+            self.assertIn("Experiment failed", str(status.render()))
+
+    async def test_tab_shortcut_routes_ctrl_r_to_inspector(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.press("2")
+            app.query_one("#reference", Input).value = "G"
+            await pilot.press("ctrl+r")
+            await pilot.pause()
+
+            self.assertEqual(
+                app.query_one("#main-tabs", TabbedContent).active,
+                "inspector-tab",
+            )
+            self.assertIn(
+                "Validation failed",
                 str(app.query_one("#status", Static).render()),
             )
 
