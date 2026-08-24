@@ -1,4 +1,5 @@
 import unittest
+import json
 from pathlib import Path
 import tempfile
 
@@ -215,6 +216,120 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
                 "Provider failed",
                 str(app.query_one("#real-data-status", Static).render()),
             )
+
+    async def test_real_data_form_names_the_missing_field(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            self.fill_real_data_form(app)
+            app.query_one("#real-position", Input).value = ""
+            await pilot.pause()
+
+            readiness = str(app.query_one("#real-data-readiness", Static).render())
+            self.assertIn("Position is required", readiness)
+            self.assertTrue(app.query_one("#real-position", Input).has_class("invalid"))
+
+            app.query_one("#run-real-data", Button).press()
+            await pilot.pause()
+            self.assertIn(
+                "Input failed: Position is required",
+                str(app.query_one("#real-data-status", Static).render()),
+            )
+
+    async def test_real_data_preview_explains_expected_work_unit(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            self.fill_real_data_form(app)
+            await pilot.pause()
+
+            readiness = str(app.query_one("#real-data-readiness", Static).render())
+            self.assertIn("Ready to run", readiness)
+            self.assertIn("21 reference-coordinate bases", readiness)
+            self.assertIn("2 samples; up to 4 contexts", readiness)
+            self.assertIn("C>T", readiness)
+
+    async def test_motif_scorer_requires_a_valid_motif(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            self.fill_real_data_form(app)
+            app.query_one("#real-model", Select).value = "motif_count"
+            await pilot.pause()
+
+            motif = app.query_one("#real-motif", Input)
+            self.assertFalse(motif.disabled)
+            self.assertIn(
+                "Motif is required",
+                str(app.query_one("#real-data-readiness", Static).render()),
+            )
+
+            motif.value = "CX"
+            await pilot.pause()
+            self.assertIn(
+                "Motif must contain only",
+                str(app.query_one("#real-data-readiness", Static).render()),
+            )
+
+            motif.value = "CAG"
+            await pilot.pause()
+            self.assertIn(
+                "Ready to run",
+                str(app.query_one("#real-data-readiness", Static).render()),
+            )
+
+    async def test_public_lesson_manifest_populates_the_workflow(self) -> None:
+        manifest = Path(self.temporary_directory.name) / "lesson.json"
+        manifest.write_text(
+            json.dumps(
+                {
+                    "assembly": "mini-v1",
+                    "local_files": {
+                        "fasta": str(FASTA_FIXTURE),
+                        "vcf": str(self.indexed_vcf),
+                    },
+                    "samples": ["HG_REF", "HG_MIX"],
+                    "focal_variant": {
+                        "contig": "chr1",
+                        "position": 21,
+                        "reference": "C",
+                        "alternate": "T",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        app = PanContextApp(lesson_manifest=manifest)
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("l")
+            await pilot.pause()
+
+            self.assertEqual(
+                app.query_one("#main-tabs", TabbedContent).active,
+                "real-data-tab",
+            )
+            self.assertEqual(app.query_one("#real-contig", Input).value, "chr1")
+            self.assertEqual(app.query_one("#real-position", Input).value, "21")
+            self.assertEqual(app.query_one("#real-left-flank", Input).value, "8")
+            self.assertEqual(app.query_one("#real-model", Select).value, "motif_count")
+            self.assertIn(
+                "2 samples; up to 4 contexts",
+                str(app.query_one("#real-data-readiness", Static).render()),
+            )
+
+    async def test_experiment_results_explain_context_dependence(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)):
+            insight = str(app.query_one("#stability-interpretation", Static).render())
+            table = app.query_one("#experiment-table", DataTable)
+            self.assertIn("Interpretation", insight)
+            self.assertIn("tested contexts", insight)
+            self.assertEqual(len(table.columns), 6)
 
 
 if __name__ == "__main__":

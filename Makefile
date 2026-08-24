@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: run test check analyze-example experiment-example real-data-example
+.PHONY: run test check analyze-example experiment-example real-data-example public-lesson
 
 run:
 	PYTHONPATH=src $(PYTHON) -m pancontext
@@ -9,7 +9,7 @@ test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
 
 check:
-	PYTHONPATH=src $(PYTHON) -m compileall -q src tests
+	PYTHONPATH=src $(PYTHON) -m compileall -q src tests scripts
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
 	$(PYTHON) -m pip check
 
@@ -47,3 +47,6 @@ real-data-example:
 		--sample HG_REF \
 		--sample HG_MIX \
 		--pretty
+
+public-lesson:
+	$(PYTHON) scripts/prepare_1000g_lesson.py

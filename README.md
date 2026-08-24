@@ -77,10 +77,12 @@ choose **Load demo** to restore the bundled request. The paired-effect table and
 cards are views over the same headless experiment engine used by the CLI.
 
 Press `1` for **Experiment**, `2` for **FASTA + VCF**, `3` for **Context Inspector**,
-`Ctrl+R` to rerun the active workflow, `D` to restore the experiment demo, and `Q` to quit.
-The data loader reconstructs haplotypes and sends them to the Experiment dashboard. The
-inspector validates one projected sequence window and is useful for debugging provider
-output.
+`4` for **Guide**, `Ctrl+R` to rerun the active workflow, `D` to restore the experiment
+demo, `L` to load the prepared public lesson, and `Q` to quit. The guided data loader marks
+required fields, checks local files and indexes as you type, previews the requested sequence
+length and maximum context count, reconstructs haplotypes, and sends successful runs to the
+Experiment dashboard. The inspector validates one projected sequence window and is useful
+for debugging provider output.
 
 In the inspector, the VCF position field is 1-based. Window starts and all internal
 coordinates are 0-based interbase coordinates; the result panel makes that conversion
@@ -156,6 +158,18 @@ Repeat `--sample` to select multiple samples, or omit it to inspect every VCF sa
 command emits `pancontext.real-data-experiment.v1`. A partial result is still written to
 standard output when compatible haplotypes exist; exclusions remain visible under
 `provider.issues`.
+
+To prepare the compact public-data teaching locus used in the guided lessons, run:
+
+```sh
+make public-lesson
+```
+
+This downloads Ensembl's GRCh38 chromosome 22 reference and extracts a two-kilobase,
+three-sample slice from the indexed 1000 Genomes phased VCF. Generated data stays under
+`.pancontext-data/` and is not committed to Git. Once prepared, press `L` in the TUI or
+choose **Load public lesson**. The preset uses a motif-count experiment designed to expose
+one genuine context-dependent result across the six reconstructed chromosome copies.
 
 Run the test suite with:
 

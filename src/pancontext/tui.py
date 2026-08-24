@@ -1,11 +1,14 @@
 """Professional Textual client for experiments and genomic context loading."""
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Tuple
 
 from rich.console import Group
 from rich.text import Text
 from textual.app import App, ComposeResult
+from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import (
     Button,
@@ -51,6 +54,20 @@ MODEL_OPTIONS = [
     ("GC content | development", "gc_content"),
     ("Motif count | development", "motif_count"),
 ]
+REAL_DATA_FIELD_IDS = {
+    "real-fasta",
+    "real-vcf",
+    "real-assembly",
+    "real-contig",
+    "real-position",
+    "real-reference",
+    "real-alternate",
+    "real-left-flank",
+    "real-right-flank",
+    "real-samples",
+    "real-motif",
+}
+DEFAULT_LESSON_MANIFEST = Path(".pancontext-data/1000g-lesson/manifest.json")
 
 
 @dataclass(frozen=True)
@@ -71,6 +88,14 @@ class RealDataInputs:
     motif: str
 
 
+@dataclass(frozen=True)
+class FormIssue:
+    """One actionable FASTA/VCF form problem associated with a widget."""
+
+    widget_id: str
+    message: str
+
+
 class PanContextApp(App[None]):
     """Interactive client backed exclusively by headless PanContext services."""
 
@@ -84,15 +109,18 @@ class PanContextApp(App[None]):
         ("1", "show_experiment", "Experiment"),
         ("2", "show_data_loader", "FASTA/VCF"),
         ("3", "show_inspector", "Inspector"),
+        ("4", "show_guide", "Guide"),
+        Binding("l", "load_lesson", "Lesson", key_display="L"),
         ("q", "quit", "Quit"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, *, lesson_manifest: Optional[Path] = None) -> None:
         super().__init__()
         self._current_experiment: Optional[ParsedExperiment] = None
         self._experiment_result: Optional[ExperimentResult] = None
         self._experiment_source = ""
         self._current_real_data: Optional[RealDataInputs] = None
+        self._lesson_manifest = lesson_manifest
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, icon="")
@@ -140,74 +168,150 @@ class PanContextApp(App[None]):
                     yield Static("--\nMean effect", id="metric-mean", classes="metric-card")
                     yield Static("--\nEffect range", id="metric-range", classes="metric-card")
                     yield Static("--\nSign agreement", id="metric-sign", classes="metric-card")
+                yield Static(
+                    "Run interpretation will appear here.",
+                    id="stability-interpretation",
+                    classes="result-insight",
+                )
                 yield Static("PAIRED CONTEXT EFFECTS", classes="section-label")
                 yield DataTable(id="experiment-table")
+                yield Static(
+                    "Each row compares matched sequences from one chromosome copy. "
+                    "Effect = ALT score - REF score.",
+                    classes="table-help",
+                )
                 yield Static("No skipped contexts.", id="skipped-contexts")
 
     def _compose_real_data(self) -> ComposeResult:
         with Horizontal(id="real-data-workspace"):
             with VerticalScroll(id="real-data-controls", classes="panel"):
-                yield Static("INDEXED DATA SOURCE", classes="panel-kicker")
-                yield Label("Reference FASTA", classes="field-label")
-                yield Input(id="real-fasta", placeholder="/data/reference.fa (with .fai)")
-                yield Label("Phased VCF or BCF", classes="field-label")
-                yield Input(id="real-vcf", placeholder="/data/cohort.vcf.gz (with .tbi/.csi)")
-                yield Label("Assembly/source name", classes="field-label")
-                yield Input(id="real-assembly", placeholder="e.g. GRCh38")
+                yield Static("NEW HAPLOTYPE EXPERIMENT", classes="panel-kicker")
+                yield Static(
+                    "Reconstruct two inherited sequence copies per selected sample, then "
+                    "measure the same focal variant in every compatible context.",
+                    classes="workspace-intro",
+                )
+                with Horizontal(classes="button-row preset-row"):
+                    yield Button(
+                        "Load public lesson",
+                        id="load-public-lesson",
+                        variant="default",
+                    )
+                    yield Button("Clear form", id="clear-real-data", variant="default")
+
+                yield Static("1  INDEXED SOURCE FILES", classes="step-label")
+                yield Label("Reference FASTA  *", classes="field-label")
+                yield Input(
+                    id="real-fasta",
+                    placeholder="Path to reference.fa; reference.fa.fai must exist",
+                )
+                yield Static(
+                    "Supplies the baseline DNA sequence for the requested interval.",
+                    classes="field-help",
+                )
+                yield Label("Phased VCF or BCF  *", classes="field-label")
+                yield Input(
+                    id="real-vcf",
+                    placeholder="Path to cohort.vcf.gz; .tbi or .csi must exist",
+                )
+                yield Static(
+                    "Supplies sample genotypes and assigns alleles to haplotype 1 or 2.",
+                    classes="field-help",
+                )
+                yield Label("Assembly / source label  *", classes="field-label")
+                yield Input(id="real-assembly", placeholder="GRCh38")
+
+                yield Static("2  FOCAL VARIANT", classes="step-label")
                 with Horizontal(classes="form-row"):
                     with Vertical(classes="form-field-wide"):
-                        yield Label("Contig", classes="field-label")
-                        yield Input(id="real-contig", placeholder="chr1")
+                        yield Label("Contig  *", classes="field-label")
+                        yield Input(id="real-contig", placeholder="Exact name, e.g. 22")
                     with Vertical(classes="form-field"):
-                        yield Label("Position | 1-based", classes="field-label")
-                        yield Input(id="real-position", placeholder="103", type="integer")
+                        yield Label("Position  *", classes="field-label")
+                        yield Input(
+                            id="real-position",
+                            placeholder="1-based VCF coordinate",
+                            type="integer",
+                        )
                 with Horizontal(classes="form-row"):
                     with Vertical(classes="form-field"):
-                        yield Label("REF", classes="field-label")
-                        yield Input(id="real-reference", placeholder="C")
+                        yield Label("REF allele  *", classes="field-label")
+                        yield Input(id="real-reference", placeholder="e.g. G")
                     with Vertical(classes="form-field"):
-                        yield Label("ALT", classes="field-label")
-                        yield Input(id="real-alternate", placeholder="T")
+                        yield Label("ALT allele  *", classes="field-label")
+                        yield Input(id="real-alternate", placeholder="e.g. T")
+                yield Static(
+                    "REF must match both the FASTA and the focal VCF record.",
+                    classes="field-help",
+                )
+
+                yield Static("3  CONTEXT AND SCORER", classes="step-label")
                 with Horizontal(classes="form-row"):
                     with Vertical(classes="form-field"):
-                        yield Label("Left flank", classes="field-label")
+                        yield Label("Bases before", classes="field-label")
                         yield Input(id="real-left-flank", value="512", type="integer")
                     with Vertical(classes="form-field"):
-                        yield Label("Right flank", classes="field-label")
+                        yield Label("Bases after", classes="field-label")
                         yield Input(id="real-right-flank", value="512", type="integer")
-                yield Label("Samples | comma-separated; blank loads all", classes="field-label")
-                yield Input(id="real-samples", placeholder="HG001, HG002")
-                yield Label("Development scorer", classes="field-label")
+                yield Label("Samples", classes="field-label")
+                yield Input(
+                    id="real-samples",
+                    placeholder="Comma-separated IDs; blank analyzes every VCF sample",
+                )
+                yield Static(
+                    "A diploid sample can contribute at most two contexts.",
+                    classes="field-help",
+                )
+                yield Label("Scorer  *", classes="field-label")
                 yield Select(
                     MODEL_OPTIONS,
                     value="gc_content",
                     allow_blank=False,
                     id="real-model",
                 )
-                yield Label("Motif | used only by motif count", classes="field-label")
-                yield Input(id="real-motif", placeholder="e.g. CAG")
-                yield Button("Reconstruct and run", id="run-real-data", variant="primary")
+                yield Label("Motif", classes="field-label", id="real-motif-label")
+                yield Input(
+                    id="real-motif",
+                    placeholder="Required for motif count, e.g. GCGGC",
+                )
+                yield Static("Required fields are marked with *.", classes="required-note")
+                yield Button(
+                    "Validate, reconstruct, and analyze",
+                    id="run-real-data",
+                    variant="primary",
+                )
 
             with Vertical(id="real-data-diagnostics", classes="panel"):
-                yield Static("PROVIDER DIAGNOSTICS", classes="panel-kicker")
+                yield Static("RUN PREVIEW", classes="panel-kicker")
                 yield Static(
-                    "Ready for indexed FASTA and phased VCF input.",
+                    "Complete the required fields to build a run preview.",
+                    id="real-data-readiness",
+                    classes="readiness incomplete",
+                )
+                yield Static("WHAT PANCONTEXT WILL DO", classes="section-label")
+                yield Static(
+                    "1. Fetch one reference window\n"
+                    "2. Verify the focal REF allele\n"
+                    "3. Project nearby phased variants into each chromosome copy\n"
+                    "4. Build matched REF and ALT sequences\n"
+                    "5. Compare ALT score minus REF score across contexts",
+                    id="real-data-plan",
+                    classes="process-card",
+                )
+                yield Static("RUN STATUS", classes="section-label")
+                yield Static(
+                    "No run started.",
                     id="real-data-status",
-                )
-                yield Static(
-                    "PanContext will query one local reference interval, validate every "
-                    "VCF REF allele, and reconstruct two haplotypes per compatible sample.",
-                    classes="callout",
-                )
-                yield Static("POLICY", classes="section-label")
-                yield Static(
-                    "Exact contig names only. Diploid heterozygous calls must be phased. "
-                    "The complete requested window must exist. Biallelic literal ACGTN "
-                    "alleles and PASS records are supported.",
-                    id="real-data-policy",
                 )
                 yield Static("LAST PROVIDER REPORT", classes="section-label")
                 yield Static("No provider run yet.", id="real-data-report")
+                yield Static(
+                    "Scientific guardrails: exact contig names; complete windows; "
+                    "diploid phased heterozygous calls; PASS, biallelic, literal ACGTN "
+                    "alleles. Unsupported records are reported, never silently guessed.",
+                    id="real-data-policy",
+                    classes="boundary-note",
+                )
 
     def _compose_inspector(self) -> ComposeResult:
         with Horizontal(id="inspector-workspace"):
@@ -270,11 +374,18 @@ class PanContextApp(App[None]):
                 "[b]FASTA + VCF[/b]\n"
                 "Query indexed files, reconstruct phased local haplotypes, and send them "
                 "to the Experiment dashboard. Nearby variants are projected before the "
-                "focal REF/ALT counterfactual is scored.\n\n"
+                "focal REF/ALT counterfactual is scored. The live preview explains how "
+                "many contexts and bases the request can produce. Load the public lesson "
+                "to explore a real 1000 Genomes locus without typing the form manually.\n\n"
+                "[b]Reading results[/b]\n"
+                "Each sample has up to two haplotype copies. REF score and ALT score are "
+                "computed on matched versions of the same reconstructed copy. Effect is "
+                "ALT minus REF; the range tells you how much that effect changes across "
+                "the tested sequence backgrounds.\n\n"
                 "[b]Keyboard[/b]\n"
                 "1 opens Experiment. 2 opens FASTA + VCF. 3 opens Context Inspector. "
-                "Ctrl+R reruns the active "
-                "workflow. D restores the bundled experiment. Q quits.\n\n"
+                "4 opens this guide. Ctrl+R reruns the active workflow. D restores the "
+                "bundled experiment. L loads the public lesson. Q quits.\n\n"
                 "[b]Scientific boundary[/b]\n"
                 "Current scorers are development instruments. PanContext loads indexed "
                 "linear FASTA/VCF input, but does not yet load GFA/GBZ or execute a "
@@ -285,11 +396,12 @@ class PanContextApp(App[None]):
     def on_mount(self) -> None:
         experiment_table = self.query_one("#experiment-table", DataTable)
         experiment_table.add_columns(
-            "Context",
+            "Sample / context",
+            "Copy",
             "Observed",
-            "Baseline",
-            "Alternate",
-            "Effect",
+            "REF score",
+            "ALT score",
+            "Effect (ALT-REF)",
         )
         experiment_table.cursor_type = "row"
         experiment_table.zebra_stripes = True
@@ -302,6 +414,9 @@ class PanContextApp(App[None]):
         self._load_inspector_example()
         self._analyze_context()
         self.action_load_demo()
+        model_value = self.query_one("#real-model", Select).value
+        self.query_one("#real-motif", Input).disabled = model_value != "motif_count"
+        self._refresh_real_data_readiness()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -311,11 +426,36 @@ class PanContextApp(App[None]):
             self.action_load_demo()
         elif button_id == "run-real-data":
             self.action_run_real_data()
+        elif button_id == "load-public-lesson":
+            self.action_load_lesson()
+        elif button_id == "clear-real-data":
+            self.action_clear_real_data()
         elif button_id == "analyze":
             self._analyze_context()
         elif button_id == "load-example":
             self._load_inspector_example()
             self._analyze_context()
+
+    def on_input_changed(self, event: Input.Changed) -> None:
+        """Keep the real-data preview synchronized with typed values."""
+
+        if event.input.id in REAL_DATA_FIELD_IDS:
+            self._refresh_real_data_readiness()
+
+    def on_select_changed(self, event: Select.Changed) -> None:
+        """Apply scorer-specific form behavior immediately."""
+
+        if event.select.id != "real-model":
+            return
+        motif_input = self.query_one("#real-motif", Input)
+        motif_input.disabled = event.select.value != "motif_count"
+        motif_label = self.query_one("#real-motif-label", Label)
+        motif_required = event.select.value == "motif_count"
+        motif_label.update(
+            "Motif  *" if motif_required else "Motif  |  not used by GC content"
+        )
+        motif_label.set_class(motif_required, "required-field")
+        self._refresh_real_data_readiness()
 
     def action_show_experiment(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "experiment-tab"
@@ -325,6 +465,87 @@ class PanContextApp(App[None]):
 
     def action_show_data_loader(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "real-data-tab"
+
+    def action_show_guide(self) -> None:
+        self.query_one("#main-tabs", TabbedContent).active = "guide-tab"
+
+    def action_clear_real_data(self) -> None:
+        """Reset the FASTA/VCF workspace without changing existing results."""
+
+        for widget_id in REAL_DATA_FIELD_IDS:
+            field = self.query_one(f"#{widget_id}", Input)
+            field.value = ""
+        self.query_one("#real-left-flank", Input).value = "512"
+        self.query_one("#real-right-flank", Input).value = "512"
+        self.query_one("#real-model", Select).value = "gc_content"
+        status = self.query_one("#real-data-status", Static)
+        status.remove_class("error", "completed", "partial")
+        status.update("No run started.")
+        self.query_one("#real-data-report", Static).update("No provider run yet.")
+        self._refresh_real_data_readiness()
+        self.query_one("#real-fasta", Input).focus()
+
+    def action_load_lesson(self) -> None:
+        """Populate the form from the locally prepared public lesson manifest."""
+
+        manifest_path = self._find_lesson_manifest()
+        status = self.query_one("#real-data-status", Static)
+        if manifest_path is None:
+            self.action_show_data_loader()
+            status.remove_class("completed", "partial")
+            status.add_class("error")
+            status.update(
+                "Public lesson is not prepared. Exit PanContext, run "
+                "'make public-lesson', then press L."
+            )
+            return
+        try:
+            document = json.loads(manifest_path.read_text(encoding="utf-8"))
+            files = document["local_files"]
+            focal = document["focal_variant"]
+            samples = document["samples"]
+            assembly = document["assembly"]
+            if not isinstance(samples, list) or not all(
+                isinstance(sample, str) for sample in samples
+            ):
+                raise ValueError("samples must be a list of strings")
+            values = {
+                "real-fasta": files["fasta"],
+                "real-vcf": files["vcf"],
+                "real-assembly": assembly,
+                "real-contig": focal["contig"],
+                "real-position": focal["position"],
+                "real-reference": focal["reference"],
+                "real-alternate": focal["alternate"],
+                "real-left-flank": 8,
+                "real-right-flank": 8,
+                "real-samples": ", ".join(samples),
+                "real-motif": "GCGGC",
+            }
+        except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
+            self.action_show_data_loader()
+            status.remove_class("completed", "partial")
+            status.add_class("error")
+            status.update(f"Could not load lesson manifest: {error}")
+            return
+        for widget_id, value in values.items():
+            self.query_one(f"#{widget_id}", Input).value = str(value)
+        self.query_one("#real-model", Select).value = "motif_count"
+        self.action_show_data_loader()
+        status.remove_class("error", "completed", "partial")
+        status.update(
+            "Lesson loaded. Review the preview, then validate, reconstruct, and analyze."
+        )
+        self._refresh_real_data_readiness()
+
+    def _find_lesson_manifest(self) -> Optional[Path]:
+        if self._lesson_manifest is not None:
+            return self._lesson_manifest if self._lesson_manifest.is_file() else None
+        candidates = (
+            Path.cwd() / DEFAULT_LESSON_MANIFEST,
+            Path(__file__).resolve().parents[2] / DEFAULT_LESSON_MANIFEST,
+        )
+        return next((path for path in candidates if path.is_file()), None)
 
     def action_rerun(self) -> None:
         active = self.query_one("#main-tabs", TabbedContent).active
@@ -409,12 +630,16 @@ class PanContextApp(App[None]):
         self.query_one("#metric-sign", Static).update(
             f"[b]{agreement}[/b]\nSign agreement"
         )
+        self.query_one("#stability-interpretation", Static).update(
+            self._stability_interpretation(result)
+        )
 
         table = self.query_one("#experiment-table", DataTable)
         table.clear(columns=False)
         table.add_rows(
             (
-                effect.context_id,
+                effect.sample_id or effect.context_id,
+                effect.haplotype_id or "--",
                 effect.observed_allele.value,
                 self._format_score(effect.baseline_score),
                 self._format_score(effect.alternate_score),
@@ -452,8 +677,33 @@ class PanContextApp(App[None]):
         self.query_one("#metric-mean", Static).update("--\nMean effect")
         self.query_one("#metric-range", Static).update("--\nEffect range")
         self.query_one("#metric-sign", Static).update("--\nSign agreement")
+        self.query_one("#stability-interpretation", Static).update(
+            "No interpretation is available because the experiment did not run."
+        )
         self.query_one("#experiment-table", DataTable).clear(columns=False)
         self.query_one("#skipped-contexts", Static).update("No experiment results.")
+
+    def _stability_interpretation(self, result: ExperimentResult) -> str:
+        stability = result.stability
+        if stability is None:
+            return "No compatible contexts were available for comparison."
+        if stability.effect_range == 0:
+            conclusion = (
+                "The focal effect is identical across all analyzed contexts for this scorer."
+            )
+        else:
+            conclusion = (
+                "The focal effect changes across the analyzed sequence backgrounds for "
+                "this scorer."
+            )
+        directions = (
+            f"Direction counts: {stability.positive_count} positive, "
+            f"{stability.negative_count} negative, {stability.zero_count} zero."
+        )
+        return (
+            f"[b]Interpretation[/b]  {conclusion}\n{directions} "
+            "These are descriptive results for the tested contexts, not a clinical claim."
+        )
 
     def action_run_real_data(self) -> None:
         status = self.query_one("#real-data-status", Static)
@@ -466,6 +716,11 @@ class PanContextApp(App[None]):
             self.query_one("#real-data-report", Static).update(
                 "No provider run. Correct the source fields."
             )
+            issues = self._real_data_form_issues()
+            if issues:
+                field = self.query_one(f"#{issues[0].widget_id}")
+                field.focus()
+                field.scroll_visible()
             return
         self._execute_real_data(inputs)
 
@@ -525,6 +780,17 @@ class PanContextApp(App[None]):
         lines = [
             f"Provider: {metadata['provider']} v{metadata['version']}",
             f"Assembly: {metadata['assembly']}",
+            (
+                f"Query: {result.query.anchor.sequence_id}:"
+                f"{result.query.anchor.position} "
+                f"{result.query.focal_variant.reference}>"
+                f"{result.query.focal_variant.alternate}"
+            ),
+            (
+                f"Window: {result.query.window.left_flank} before + focal allele + "
+                f"{result.query.window.right_flank} after"
+            ),
+            f"Reconstructed: {len(result.batch.contexts)} haplotype contexts",
             f"FASTA: {inputs['fasta']['path']}",
             f"VCF: {inputs['vcf']['path']}",
         ]
@@ -564,6 +830,9 @@ class PanContextApp(App[None]):
         self.query_one("#main-tabs", TabbedContent).active = "experiment-tab"
 
     def _read_real_data_inputs(self) -> RealDataInputs:
+        issues = self._real_data_form_issues()
+        if issues:
+            raise ValueError(issues[0].message)
         samples_value = self.query_one("#real-samples", Input).value
         samples = tuple(
             sample.strip() for sample in samples_value.split(",") if sample.strip()
@@ -572,18 +841,167 @@ class PanContextApp(App[None]):
         if model_value is Select.NULL:
             raise ValueError("development scorer must be selected")
         return RealDataInputs(
-            fasta_path=self.query_one("#real-fasta", Input).value.strip(),
-            vcf_path=self.query_one("#real-vcf", Input).value.strip(),
+            fasta_path=str(
+                Path(self.query_one("#real-fasta", Input).value.strip()).expanduser()
+            ),
+            vcf_path=str(Path(self.query_one("#real-vcf", Input).value.strip()).expanduser()),
             assembly=self.query_one("#real-assembly", Input).value.strip(),
             contig=self.query_one("#real-contig", Input).value.strip(),
-            position=int(self.query_one("#real-position", Input).value),
-            reference=self.query_one("#real-reference", Input).value,
-            alternate=self.query_one("#real-alternate", Input).value,
-            left_flank=int(self.query_one("#real-left-flank", Input).value),
-            right_flank=int(self.query_one("#real-right-flank", Input).value),
+            position=int(self.query_one("#real-position", Input).value.strip()),
+            reference=self.query_one("#real-reference", Input).value.strip().upper(),
+            alternate=self.query_one("#real-alternate", Input).value.strip().upper(),
+            left_flank=int(self.query_one("#real-left-flank", Input).value.strip()),
+            right_flank=int(self.query_one("#real-right-flank", Input).value.strip()),
             samples=samples or None,
             model=str(model_value),
-            motif=self.query_one("#real-motif", Input).value,
+            motif=self.query_one("#real-motif", Input).value.strip().upper(),
+        )
+
+    def _real_data_form_issues(self) -> Tuple[FormIssue, ...]:
+        """Return every locally detectable form issue in workflow order."""
+
+        issues = []
+        value = lambda widget_id: self.query_one(f"#{widget_id}", Input).value.strip()
+
+        fasta_value = value("real-fasta")
+        fasta_path = Path(fasta_value).expanduser()
+        if not fasta_value:
+            issues.append(FormIssue("real-fasta", "Reference FASTA is required."))
+        elif not fasta_path.is_file():
+            issues.append(FormIssue("real-fasta", "Reference FASTA file does not exist."))
+        elif not Path(f"{fasta_path}.fai").is_file():
+            issues.append(
+                FormIssue("real-fasta", "FASTA index is missing; expected <FASTA>.fai.")
+            )
+
+        vcf_value = value("real-vcf")
+        vcf_path = Path(vcf_value).expanduser()
+        if not vcf_value:
+            issues.append(FormIssue("real-vcf", "Phased VCF or BCF is required."))
+        elif not vcf_path.is_file():
+            issues.append(FormIssue("real-vcf", "VCF or BCF file does not exist."))
+        elif not any(Path(f"{vcf_path}{suffix}").is_file() for suffix in (".tbi", ".csi")):
+            issues.append(
+                FormIssue("real-vcf", "Variant index is missing; expected .tbi or .csi.")
+            )
+
+        for widget_id, label in (
+            ("real-assembly", "Assembly / source label"),
+            ("real-contig", "Contig"),
+        ):
+            if not value(widget_id):
+                issues.append(FormIssue(widget_id, f"{label} is required."))
+
+        position = self._validate_integer_field(
+            widget_id="real-position",
+            label="Position",
+            minimum=1,
+        )
+        if position is not None:
+            issues.append(position)
+        reference = value("real-reference").upper()
+        alternate = value("real-alternate").upper()
+        for widget_id, label, allele in (
+            ("real-reference", "REF allele", reference),
+            ("real-alternate", "ALT allele", alternate),
+        ):
+            if not allele:
+                issues.append(FormIssue(widget_id, f"{label} is required."))
+            elif not set(allele) <= set("ACGTN"):
+                issues.append(
+                    FormIssue(widget_id, f"{label} must contain only A, C, G, T, or N.")
+                )
+        if reference and alternate and reference == alternate:
+            issues.append(FormIssue("real-alternate", "ALT must differ from REF."))
+
+        left_flank = self._validate_integer_field(
+            widget_id="real-left-flank",
+            label="Bases before",
+            minimum=0,
+        )
+        right_flank = self._validate_integer_field(
+            widget_id="real-right-flank",
+            label="Bases after",
+            minimum=0,
+        )
+        issues.extend(issue for issue in (left_flank, right_flank) if issue)
+
+        samples = [
+            sample.strip() for sample in value("real-samples").split(",") if sample.strip()
+        ]
+        if len(samples) != len(set(samples)):
+            issues.append(FormIssue("real-samples", "Sample IDs must be unique."))
+
+        model_value = self.query_one("#real-model", Select).value
+        if model_value is Select.NULL:
+            issues.append(FormIssue("real-model", "A scorer must be selected."))
+        elif model_value == "motif_count":
+            motif = value("real-motif").upper()
+            if not motif:
+                issues.append(
+                    FormIssue("real-motif", "Motif is required for the motif-count scorer.")
+                )
+            elif not set(motif) <= set("ACGTN"):
+                issues.append(
+                    FormIssue("real-motif", "Motif must contain only A, C, G, T, or N.")
+                )
+        return tuple(issues)
+
+    def _validate_integer_field(
+        self,
+        *,
+        widget_id: str,
+        label: str,
+        minimum: int,
+    ) -> Optional[FormIssue]:
+        raw = self.query_one(f"#{widget_id}", Input).value.strip()
+        if not raw:
+            return FormIssue(widget_id, f"{label} is required.")
+        try:
+            parsed = int(raw)
+        except ValueError:
+            return FormIssue(widget_id, f"{label} must be a whole number.")
+        if parsed < minimum:
+            return FormIssue(widget_id, f"{label} must be at least {minimum}.")
+        return None
+
+    def _refresh_real_data_readiness(self) -> None:
+        """Render validation state and the expected biological work unit."""
+
+        readiness = self.query_one("#real-data-readiness", Static)
+        issues = self._real_data_form_issues()
+        invalid_ids = {issue.widget_id for issue in issues}
+        for widget_id in REAL_DATA_FIELD_IDS:
+            self.query_one(f"#{widget_id}", Input).set_class(
+                widget_id in invalid_ids,
+                "invalid",
+            )
+        readiness.remove_class("ready", "incomplete")
+        if issues:
+            readiness.add_class("incomplete")
+            visible = issues[:4]
+            lines = [f"[b]Form incomplete[/b]  {len(issues)} item(s) need attention."]
+            lines.extend(f"- {issue.message}" for issue in visible)
+            if len(issues) > len(visible):
+                lines.append(f"- Plus {len(issues) - len(visible)} more below.")
+            readiness.update("\n".join(lines))
+            return
+
+        inputs = self._read_real_data_inputs()
+        sequence_length = inputs.left_flank + len(inputs.reference) + inputs.right_flank
+        if inputs.samples is None:
+            cohort = "all VCF samples; up to two contexts per sample"
+        else:
+            context_count = len(inputs.samples) * 2
+            cohort = f"{len(inputs.samples)} samples; up to {context_count} contexts"
+        scorer = "GC fraction" if inputs.model == "gc_content" else f"motif {inputs.motif!r}"
+        readiness.add_class("ready")
+        readiness.update(
+            "[b]Ready to run[/b]\n"
+            f"{inputs.assembly}  |  {inputs.contig}:{inputs.position}  |  "
+            f"{inputs.reference}>{inputs.alternate}\n"
+            f"{sequence_length} reference-coordinate bases  |  {cohort}\n"
+            f"Scorer: {scorer}  |  Effect: ALT score - REF score"
         )
 
     def _load_inspector_example(self) -> None:
@@ -624,14 +1042,39 @@ class PanContextApp(App[None]):
             raise ValueError("context source type must be selected")
         return AnalysisRequest(
             source_type=ContextSource(str(source_value)),
-            source_name=self.query_one("#source-name", Input).value,
-            sequence_id=self.query_one("#sequence-id", Input).value,
-            window_start=int(self.query_one("#window-start", Input).value),
-            sequence=self.query_one("#sequence", Input).value,
-            vcf_position=int(self.query_one("#vcf-position", Input).value),
-            reference=self.query_one("#reference", Input).value,
-            alternate=self.query_one("#alternate", Input).value,
+            source_name=self._required_inspector_text("source-name", "Source name"),
+            sequence_id=self._required_inspector_text(
+                "sequence-id",
+                "Sequence identifier",
+            ),
+            window_start=self._inspector_integer("window-start", "Window start", minimum=0),
+            sequence=self._required_inspector_text("sequence", "Sequence context window"),
+            vcf_position=self._inspector_integer(
+                "vcf-position",
+                "Variant position",
+                minimum=1,
+            ),
+            reference=self._required_inspector_text("reference", "REF allele"),
+            alternate=self._required_inspector_text("alternate", "ALT allele"),
         )
+
+    def _required_inspector_text(self, widget_id: str, label: str) -> str:
+        value = self.query_one(f"#{widget_id}", Input).value.strip()
+        if not value:
+            raise ValueError(f"{label} is required")
+        return value
+
+    def _inspector_integer(self, widget_id: str, label: str, *, minimum: int) -> int:
+        value = self.query_one(f"#{widget_id}", Input).value.strip()
+        if not value:
+            raise ValueError(f"{label} is required")
+        try:
+            parsed = int(value)
+        except ValueError as error:
+            raise ValueError(f"{label} must be a whole number") from error
+        if parsed < minimum:
+            raise ValueError(f"{label} must be at least {minimum}")
+        return parsed
 
     def _clear_inspector_results(self) -> None:
         self.query_one("#coordinate-table", DataTable).clear(columns=False)

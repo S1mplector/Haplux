@@ -98,6 +98,22 @@ TabPane {
     margin-bottom: 1;
 }
 
+.workspace-intro {
+    height: auto;
+    color: #c7c8ca;
+    margin-bottom: 1;
+}
+
+.step-label {
+    height: 3;
+    margin-top: 1;
+    padding: 1 1 0 1;
+    color: #e5e5e6;
+    background: #232428;
+    border-left: thick #777980;
+    text-style: bold;
+}
+
 .section-label {
     height: 1;
     margin-top: 1;
@@ -109,6 +125,31 @@ TabPane {
 .field-label {
     color: #adafb3;
     margin-top: 1;
+}
+
+.field-help,
+.required-note,
+.table-help {
+    height: auto;
+    color: #898b90;
+}
+
+.field-help {
+    padding: 0 1;
+}
+
+.required-note {
+    margin-top: 1;
+}
+
+.table-help {
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+.required-field {
+    color: #d7d8da;
+    text-style: bold;
 }
 
 Input,
@@ -126,6 +167,19 @@ SelectCurrent {
 Input:focus,
 Select:focus > SelectCurrent {
     border: tall #92949a;
+}
+
+Input.invalid {
+    border: tall #696b70;
+    background: #18191c;
+}
+
+Input.invalid:focus {
+    border: tall #b4b5b8;
+}
+
+Input:disabled {
+    opacity: 55%;
 }
 
 Select > SelectOverlay {
@@ -169,6 +223,10 @@ Button.-primary:hover {
     margin-right: 1;
 }
 
+.preset-row {
+    margin-bottom: 1;
+}
+
 .callout,
 .boundary-note {
     height: auto;
@@ -196,11 +254,40 @@ Button.-primary:hover {
 #experiment-status,
 #real-data-status,
 #status {
-    height: 3;
+    height: auto;
+    min-height: 3;
     padding: 1;
     margin-bottom: 1;
     background: #242529;
     border-left: thick #5f6167;
+}
+
+.readiness {
+    height: auto;
+    min-height: 6;
+    padding: 1 2;
+    margin-bottom: 1;
+    background: #101113;
+    border: round #3d3f44;
+}
+
+.readiness.incomplete {
+    color: #b6b7ba;
+    border-left: thick #62646a;
+}
+
+.readiness.ready {
+    color: #eeeeef;
+    background: #202125;
+    border-left: thick #a4a5a9;
+}
+
+.process-card {
+    height: auto;
+    padding: 1 2;
+    color: #c9cacc;
+    background: #151619;
+    border: round #3d3f44;
 }
 
 #experiment-status.completed,
@@ -229,6 +316,16 @@ Button.-primary:hover {
 #metric-row {
     height: 5;
     margin-bottom: 1;
+}
+
+.result-insight {
+    height: auto;
+    min-height: 4;
+    margin-bottom: 1;
+    padding: 1 2;
+    color: #d2d3d5;
+    background: #202125;
+    border-left: thick #777980;
 }
 
 .metric-card {
@@ -313,6 +410,10 @@ DataTable:focus > .datatable--cursor {
     background: #101113;
     border: round #3d3f44;
     color: #c9cacc;
+}
+
+#real-data-policy {
+    margin-top: 1;
 }
 
 #real-data-report {
