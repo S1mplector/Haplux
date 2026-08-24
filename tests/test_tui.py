@@ -1,9 +1,13 @@
 import unittest
+from pathlib import Path
 
 from textual.widgets import Button, DataTable, Input, Select, Static, TabbedContent
 
 from pancontext.context import ContextSource
 from pancontext.tui import PanContextApp
+
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
@@ -92,6 +96,36 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
 
             status = app.query_one("#experiment-status", Static)
             self.assertIn("Experiment failed", str(status.render()))
+            self.assertEqual(
+                app.query_one("#experiment-table", DataTable).row_count,
+                0,
+            )
+            self.assertIn(
+                "No valid experiment",
+                str(app.query_one("#experiment-metadata", Static).render()),
+            )
+
+    async def test_experiment_fixture_runs_from_the_file_control(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(120, 40)) as pilot:
+            fixture = FIXTURES / "experiment_request.json"
+            app.query_one("#experiment-path", Input).value = str(fixture)
+            app.query_one("#run-experiment", Button).press()
+            await pilot.pause()
+
+            self.assertIn(
+                "Completed: 2 analyzed",
+                str(app.query_one("#experiment-status", Static).render()),
+            )
+            self.assertEqual(
+                app.query_one("#experiment-table", DataTable).row_count,
+                2,
+            )
+            self.assertIn(
+                "two-haplotype-demo",
+                str(app.query_one("#experiment-metadata", Static).render()),
+            )
 
     async def test_tab_shortcut_routes_ctrl_r_to_inspector(self) -> None:
         app = PanContextApp()

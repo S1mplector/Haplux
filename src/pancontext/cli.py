@@ -103,16 +103,16 @@ def _run_headless(arguments: argparse.Namespace) -> int:
     return 0
 
 
-def _load_json_document(path: str) -> object:
-    if path == "-":
-        return json.load(sys.stdin)
-    return None
+def _load_stdin_document() -> object:
+    """Read one JSON experiment document from standard input."""
+
+    return json.load(sys.stdin)
 
 
 def _run_experiment_headless(arguments: argparse.Namespace) -> int:
     try:
         if arguments.input == "-":
-            parsed = parse_experiment_document(_load_json_document(arguments.input))
+            parsed = parse_experiment_document(_load_stdin_document())
         else:
             parsed = load_experiment_file(arguments.input)
         result = run_experiment(parsed.request, parsed.model)

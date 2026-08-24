@@ -66,11 +66,18 @@ Then launch the PanContext workspace:
 .venv/bin/pancontext
 ```
 
-The TUI opens with a worked example. Edit any field and press **Analyze** or
-`Ctrl+R`. Press `E` to restore the example and `Q` to quit.
+The TUI opens on the **Experiment** workspace with a three-haplotype demonstration already
+analyzed. Enter a `pancontext.experiment-request.v1` JSON path and choose **Run file**, or
+choose **Load demo** to restore the bundled request. The paired-effect table and stability
+cards are views over the same headless experiment engine used by the CLI.
 
-The VCF position field is 1-based. Window starts and all internal coordinates are
-0-based interbase coordinates; the result panel makes that conversion visible.
+Press `1` for **Experiment**, `2` for **Context Inspector**, `Ctrl+R` to rerun the active
+workflow, `D` to restore the experiment demo, and `Q` to quit. The **Context Inspector**
+validates one projected sequence window and is useful for debugging provider output.
+
+In the inspector, the VCF position field is 1-based. Window starts and all internal
+coordinates are 0-based interbase coordinates; the result panel makes that conversion
+visible.
 
 ## Run headlessly
 

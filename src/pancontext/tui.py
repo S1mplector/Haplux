@@ -262,7 +262,7 @@ class PanContextApp(App[None]):
 
     def _render_experiment(self, result: ExperimentResult, source: str) -> None:
         status = self.query_one("#experiment-status", Static)
-        status.remove_class("success", "error", "partial")
+        status.remove_class("completed", "error", "failed", "partial")
         status.add_class("error" if result.status == "failed" else result.status)
         status.update(
             f"{result.status.title()}: {len(result.effects)} analyzed, "
@@ -322,10 +322,24 @@ class PanContextApp(App[None]):
             skipped.update("\n".join(lines))
 
     def _render_experiment_error(self, error: Exception) -> None:
+        self._current_experiment = None
+        self._experiment_result = None
+        self._experiment_source = ""
+
         status = self.query_one("#experiment-status", Static)
-        status.remove_class("success", "partial")
+        status.remove_class("completed", "failed", "partial")
         status.add_class("error")
         status.update(f"Experiment failed: {error}")
+
+        self.query_one("#experiment-metadata", Static).update(
+            "No valid experiment loaded. Correct the request or load the demo."
+        )
+        self.query_one("#metric-contexts", Static).update("0 / 0\nContexts")
+        self.query_one("#metric-mean", Static).update("--\nMean effect")
+        self.query_one("#metric-range", Static).update("--\nEffect range")
+        self.query_one("#metric-sign", Static).update("--\nSign agreement")
+        self.query_one("#experiment-table", DataTable).clear(columns=False)
+        self.query_one("#skipped-contexts", Static).update("No experiment results.")
 
     def _load_inspector_example(self) -> None:
         self.query_one("#source-type", Select).value = INSPECTOR_EXAMPLE["source_type"]

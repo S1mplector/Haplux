@@ -28,7 +28,9 @@ The suite currently covers:
 - fresh-process module entry-point success and failure behavior;
 - TUI mounting at wide and compact terminal sizes;
 - TUI rendering of valid and invalid analyses;
-- keyboard-triggered analysis through `Ctrl+R`.
+- default experiment-demo execution and experiment-file loading;
+- clearing stale experiment results after a file failure;
+- keyboard-triggered analysis through `Ctrl+R`;
 - REF-observed and ALT-observed counterfactual construction;
 - deterministic model adapters and invalid model outputs;
 - completed, partial, and failed multi-context experiments;
