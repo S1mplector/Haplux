@@ -388,6 +388,7 @@ DataTable:focus > .datatable--cursor {
 .form-field,
 .form-field-wide {
     width: 1fr;
+    height: auto;
     margin-right: 1;
 }
 
@@ -428,6 +429,7 @@ DataTable:focus > .datatable--cursor {
 
 .allele-field {
     width: 1fr;
+    height: auto;
 }
 
 .allele-field:first-child {

@@ -251,6 +251,18 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("2 samples; up to 4 contexts", readiness)
             self.assertIn("C>T", readiness)
 
+    async def test_real_data_input_rows_do_not_expand_vertically(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            await pilot.pause()
+
+            rows = list(app.query(".form-row"))
+            self.assertEqual(len(rows), 3)
+            self.assertTrue(all(row.region.height <= 6 for row in rows))
+            self.assertEqual(rows[1].region.y, rows[0].region.bottom)
+
     async def test_motif_scorer_requires_a_valid_motif(self) -> None:
         app = PanContextApp()
 
