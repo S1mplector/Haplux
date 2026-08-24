@@ -29,12 +29,23 @@ from pancontext.experiment import (
     run_experiment,
 )
 from pancontext.models import GCContentModel, MotifCountModel, ScalarModelAdapter
+from pancontext.providers import (
+    AnchorLocus,
+    ContextProvider,
+    ContextQuery,
+    ProviderBatch,
+    ProviderIssue,
+    WindowSpecification,
+)
 
 __all__ = [
     "AnalysisRequest",
     "AnalysisResult",
+    "AnchorLocus",
     "ContextEffect",
     "ContextSource",
+    "ContextProvider",
+    "ContextQuery",
     "ExperimentContext",
     "ExperimentRequest",
     "ExperimentResult",
@@ -43,6 +54,8 @@ __all__ = [
     "HaplotypeWindow",
     "MotifCountModel",
     "ObservedAllele",
+    "ProviderBatch",
+    "ProviderIssue",
     "ReferenceMismatchError",
     "SequenceContext",
     "SequenceProvenance",
@@ -50,6 +63,7 @@ __all__ = [
     "ScalarModelAdapter",
     "StabilitySummary",
     "Variant",
+    "WindowSpecification",
     "analyze_variant",
     "classify_variant",
     "ga4gh_sequence_id",

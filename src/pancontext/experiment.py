@@ -1,13 +1,14 @@
 """Multi-context model-effect experiments and descriptive stability metrics."""
 
 from dataclasses import dataclass
+from math import isfinite
 from statistics import fmean, pstdev
 from typing import Any, Dict, Optional, Tuple
 
 from pancontext.analysis import AnalysisRequest, ObservedAllele, analyze_variant
 from pancontext.context import ContextSource
 from pancontext.domain import SequenceValidationError, Variant
-from pancontext.models import ScalarModelAdapter
+from pancontext.models import ModelValidationError, ScalarModelAdapter
 
 
 EXPERIMENT_SCHEMA_VERSION = "pancontext.experiment.v1"
@@ -319,6 +320,8 @@ def run_experiment(
         try:
             baseline_score = float(model.predict(analysis.baseline_sequence))
             alternate_score = float(model.predict(analysis.alternate_sequence))
+            if not isfinite(baseline_score) or not isfinite(alternate_score):
+                raise ModelValidationError("model predictions must be finite")
         except ValueError as error:
             skipped.append(
                 SkippedContext(
