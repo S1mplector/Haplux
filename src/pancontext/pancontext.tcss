@@ -50,6 +50,7 @@ TabPane {
 }
 
 #experiment-workspace,
+#real-data-workspace,
 #inspector-workspace {
     height: 1fr;
 }
@@ -68,6 +69,16 @@ TabPane {
 
 #experiment-results {
     width: 69%;
+}
+
+#real-data-controls {
+    width: 46%;
+    min-width: 48;
+    margin-right: 1;
+}
+
+#real-data-diagnostics {
+    width: 54%;
 }
 
 #input-panel {
@@ -183,6 +194,7 @@ Button.-primary:hover {
 }
 
 #experiment-status,
+#real-data-status,
 #status {
     height: 3;
     padding: 1;
@@ -193,18 +205,21 @@ Button.-primary:hover {
 
 #experiment-status.completed,
 #experiment-status.success,
+#real-data-status.completed,
 #status.success {
     color: #e3e3e4;
     border-left: thick #8d8f95;
 }
 
-#experiment-status.partial {
+#experiment-status.partial,
+#real-data-status.partial {
     color: #e9e9ea;
     border-left: thick #a8a9ad;
     background: #292a2e;
 }
 
 #experiment-status.error,
+#real-data-status.error,
 #status.error {
     color: #f1f1f2;
     background: #303135;
@@ -266,6 +281,43 @@ DataTable:focus > .datatable--cursor {
     padding: 1 2;
     color: #bfc0c3;
     background: #242529;
+    overflow-y: auto;
+}
+
+.form-row {
+    height: auto;
+}
+
+.form-field,
+.form-field-wide {
+    width: 1fr;
+    margin-right: 1;
+}
+
+.form-field-wide {
+    width: 2fr;
+}
+
+.form-row > Vertical:last-child {
+    margin-right: 0;
+}
+
+#run-real-data {
+    margin-top: 1;
+}
+
+#real-data-policy,
+#real-data-report {
+    height: auto;
+    padding: 1 2;
+    background: #101113;
+    border: round #3d3f44;
+    color: #c9cacc;
+}
+
+#real-data-report {
+    height: 1fr;
+    min-height: 12;
     overflow-y: auto;
 }
 
@@ -333,6 +385,15 @@ Screen.-compact #experiment-controls {
 
 Screen.-compact #experiment-results {
     width: 66%;
+}
+
+Screen.-compact #real-data-controls {
+    width: 48%;
+    min-width: 36;
+}
+
+Screen.-compact #real-data-diagnostics {
+    width: 52%;
 }
 
 Screen.-compact #input-panel {

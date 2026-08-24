@@ -1,6 +1,7 @@
-"""Professional Textual client for experiments and single-context inspection."""
+"""Professional Textual client for experiments and genomic context loading."""
 
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 from rich.console import Group
 from rich.text import Text
@@ -22,12 +23,16 @@ from textual.widgets import (
 from pancontext.analysis import AnalysisRequest, AnalysisResult, analyze_variant
 from pancontext.context import ContextSource
 from pancontext.demo import experiment_demo_document
-from pancontext.experiment import ExperimentResult, run_experiment
+from pancontext.experiment import ExperimentResult, FocalVariant, run_experiment
 from pancontext.experiment_io import (
     ParsedExperiment,
     load_experiment_file,
     parse_experiment_document,
 )
+from pancontext.fasta_vcf import FastaVcfProvider
+from pancontext.models import create_builtin_model
+from pancontext.providers import AnchorLocus, ContextQuery, WindowSpecification
+from pancontext.real_data import RealDataExperimentResult, run_provider_experiment
 
 
 INSPECTOR_EXAMPLE = {
@@ -42,6 +47,28 @@ INSPECTOR_EXAMPLE = {
 }
 
 SOURCE_OPTIONS = [(source.label, source.value) for source in ContextSource]
+MODEL_OPTIONS = [
+    ("GC content | development", "gc_content"),
+    ("Motif count | development", "motif_count"),
+]
+
+
+@dataclass(frozen=True)
+class RealDataInputs:
+    """Validated strings read from the FASTA/VCF loader workspace."""
+
+    fasta_path: str
+    vcf_path: str
+    assembly: str
+    contig: str
+    position: int
+    reference: str
+    alternate: str
+    left_flank: int
+    right_flank: int
+    samples: Optional[Tuple[str, ...]]
+    model: str
+    motif: str
 
 
 class PanContextApp(App[None]):
@@ -55,7 +82,8 @@ class PanContextApp(App[None]):
         ("ctrl+r", "rerun", "Run"),
         ("d", "load_demo", "Demo"),
         ("1", "show_experiment", "Experiment"),
-        ("2", "show_inspector", "Inspector"),
+        ("2", "show_data_loader", "FASTA/VCF"),
+        ("3", "show_inspector", "Inspector"),
         ("q", "quit", "Quit"),
     ]
 
@@ -64,12 +92,15 @@ class PanContextApp(App[None]):
         self._current_experiment: Optional[ParsedExperiment] = None
         self._experiment_result: Optional[ExperimentResult] = None
         self._experiment_source = ""
+        self._current_real_data: Optional[RealDataInputs] = None
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True, icon="")
         with TabbedContent(initial="experiment-tab", id="main-tabs"):
             with TabPane("Experiment", id="experiment-tab"):
                 yield from self._compose_experiment()
+            with TabPane("FASTA + VCF", id="real-data-tab"):
+                yield from self._compose_real_data()
             with TabPane("Context Inspector", id="inspector-tab"):
                 yield from self._compose_inspector()
             with TabPane("Guide", id="guide-tab"):
@@ -112,6 +143,71 @@ class PanContextApp(App[None]):
                 yield Static("PAIRED CONTEXT EFFECTS", classes="section-label")
                 yield DataTable(id="experiment-table")
                 yield Static("No skipped contexts.", id="skipped-contexts")
+
+    def _compose_real_data(self) -> ComposeResult:
+        with Horizontal(id="real-data-workspace"):
+            with VerticalScroll(id="real-data-controls", classes="panel"):
+                yield Static("INDEXED DATA SOURCE", classes="panel-kicker")
+                yield Label("Reference FASTA", classes="field-label")
+                yield Input(id="real-fasta", placeholder="/data/reference.fa (with .fai)")
+                yield Label("Phased VCF or BCF", classes="field-label")
+                yield Input(id="real-vcf", placeholder="/data/cohort.vcf.gz (with .tbi/.csi)")
+                yield Label("Assembly/source name", classes="field-label")
+                yield Input(id="real-assembly", placeholder="e.g. GRCh38")
+                with Horizontal(classes="form-row"):
+                    with Vertical(classes="form-field-wide"):
+                        yield Label("Contig", classes="field-label")
+                        yield Input(id="real-contig", placeholder="chr1")
+                    with Vertical(classes="form-field"):
+                        yield Label("Position | 1-based", classes="field-label")
+                        yield Input(id="real-position", placeholder="103", type="integer")
+                with Horizontal(classes="form-row"):
+                    with Vertical(classes="form-field"):
+                        yield Label("REF", classes="field-label")
+                        yield Input(id="real-reference", placeholder="C")
+                    with Vertical(classes="form-field"):
+                        yield Label("ALT", classes="field-label")
+                        yield Input(id="real-alternate", placeholder="T")
+                with Horizontal(classes="form-row"):
+                    with Vertical(classes="form-field"):
+                        yield Label("Left flank", classes="field-label")
+                        yield Input(id="real-left-flank", value="512", type="integer")
+                    with Vertical(classes="form-field"):
+                        yield Label("Right flank", classes="field-label")
+                        yield Input(id="real-right-flank", value="512", type="integer")
+                yield Label("Samples | comma-separated; blank loads all", classes="field-label")
+                yield Input(id="real-samples", placeholder="HG001, HG002")
+                yield Label("Development scorer", classes="field-label")
+                yield Select(
+                    MODEL_OPTIONS,
+                    value="gc_content",
+                    allow_blank=False,
+                    id="real-model",
+                )
+                yield Label("Motif | used only by motif count", classes="field-label")
+                yield Input(id="real-motif", placeholder="e.g. CAG")
+                yield Button("Reconstruct and run", id="run-real-data", variant="primary")
+
+            with Vertical(id="real-data-diagnostics", classes="panel"):
+                yield Static("PROVIDER DIAGNOSTICS", classes="panel-kicker")
+                yield Static(
+                    "Ready for indexed FASTA and phased VCF input.",
+                    id="real-data-status",
+                )
+                yield Static(
+                    "PanContext will query one local reference interval, validate every "
+                    "VCF REF allele, and reconstruct two haplotypes per compatible sample.",
+                    classes="callout",
+                )
+                yield Static("POLICY", classes="section-label")
+                yield Static(
+                    "Exact contig names only. Diploid heterozygous calls must be phased. "
+                    "The complete requested window must exist. Biallelic literal ACGTN "
+                    "alleles and PASS records are supported.",
+                    id="real-data-policy",
+                )
+                yield Static("LAST PROVIDER REPORT", classes="section-label")
+                yield Static("No provider run yet.", id="real-data-report")
 
     def _compose_inspector(self) -> ComposeResult:
         with Horizontal(id="inspector-workspace"):
@@ -171,12 +267,18 @@ class PanContextApp(App[None]):
                 "[b]Context Inspector[/b]\n"
                 "Validate one sequence window, coordinate conversion, and allele "
                 "replacement. This is the debugging surface for provider output.\n\n"
+                "[b]FASTA + VCF[/b]\n"
+                "Query indexed files, reconstruct phased local haplotypes, and send them "
+                "to the Experiment dashboard. Nearby variants are projected before the "
+                "focal REF/ALT counterfactual is scored.\n\n"
                 "[b]Keyboard[/b]\n"
-                "1 opens Experiment. 2 opens Context Inspector. Ctrl+R reruns the active "
+                "1 opens Experiment. 2 opens FASTA + VCF. 3 opens Context Inspector. "
+                "Ctrl+R reruns the active "
                 "workflow. D restores the bundled experiment. Q quits.\n\n"
                 "[b]Scientific boundary[/b]\n"
-                "Current scorers are development instruments. PanContext does not yet load "
-                "FASTA, VCF, GFA, or execute a biological foundation model.",
+                "Current scorers are development instruments. PanContext loads indexed "
+                "linear FASTA/VCF input, but does not yet load GFA/GBZ or execute a "
+                "biological foundation model.",
                 id="guide-text",
             )
 
@@ -207,6 +309,8 @@ class PanContextApp(App[None]):
             self.action_run_experiment_file()
         elif button_id == "load-demo":
             self.action_load_demo()
+        elif button_id == "run-real-data":
+            self.action_run_real_data()
         elif button_id == "analyze":
             self._analyze_context()
         elif button_id == "load-example":
@@ -219,10 +323,17 @@ class PanContextApp(App[None]):
     def action_show_inspector(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "inspector-tab"
 
+    def action_show_data_loader(self) -> None:
+        self.query_one("#main-tabs", TabbedContent).active = "real-data-tab"
+
     def action_rerun(self) -> None:
         active = self.query_one("#main-tabs", TabbedContent).active
         if active == "inspector-tab":
             self._analyze_context()
+        elif active == "real-data-tab":
+            self.action_run_real_data()
+        elif self._current_real_data is not None:
+            self._execute_real_data(self._current_real_data)
         elif self._current_experiment is not None:
             self._execute_experiment(self._current_experiment, self._experiment_source)
         else:
@@ -235,6 +346,7 @@ class PanContextApp(App[None]):
             self._render_experiment_error(error)
             return
         self.query_one("#experiment-path", Input).value = ""
+        self._current_real_data = None
         self._execute_experiment(parsed, "Bundled three-haplotype demo")
 
     def action_run_experiment_file(self) -> None:
@@ -256,6 +368,7 @@ class PanContextApp(App[None]):
             self._render_experiment_error(error)
             return
         self._current_experiment = parsed
+        self._current_real_data = None
         self._experiment_result = result
         self._experiment_source = source
         self._render_experiment(result, source)
@@ -323,6 +436,7 @@ class PanContextApp(App[None]):
 
     def _render_experiment_error(self, error: Exception) -> None:
         self._current_experiment = None
+        self._current_real_data = None
         self._experiment_result = None
         self._experiment_source = ""
 
@@ -340,6 +454,137 @@ class PanContextApp(App[None]):
         self.query_one("#metric-sign", Static).update("--\nSign agreement")
         self.query_one("#experiment-table", DataTable).clear(columns=False)
         self.query_one("#skipped-contexts", Static).update("No experiment results.")
+
+    def action_run_real_data(self) -> None:
+        status = self.query_one("#real-data-status", Static)
+        try:
+            inputs = self._read_real_data_inputs()
+        except ValueError as error:
+            status.remove_class("completed", "partial")
+            status.add_class("error")
+            status.update(f"Input failed: {error}")
+            self.query_one("#real-data-report", Static).update(
+                "No provider run. Correct the source fields."
+            )
+            return
+        self._execute_real_data(inputs)
+
+    def _execute_real_data(self, inputs: RealDataInputs) -> None:
+        status = self.query_one("#real-data-status", Static)
+        try:
+            focal = FocalVariant(
+                identifier=(
+                    f"{inputs.contig}:{inputs.position}:"
+                    f"{inputs.reference}:{inputs.alternate}"
+                ),
+                reference=inputs.reference,
+                alternate=inputs.alternate,
+            )
+            query = ContextQuery(
+                focal_variant=focal,
+                anchor=AnchorLocus(inputs.assembly, inputs.contig, inputs.position),
+                window=WindowSpecification(inputs.left_flank, inputs.right_flank),
+            )
+            provider = FastaVcfProvider(
+                fasta_path=inputs.fasta_path,
+                vcf_path=inputs.vcf_path,
+                assembly_name=inputs.assembly,
+                samples=inputs.samples,
+            )
+            parameters = {"motif": inputs.motif} if inputs.model == "motif_count" else {}
+            model = create_builtin_model(inputs.model, parameters)
+            result = run_provider_experiment(
+                experiment_id=f"vcf-{focal.identifier}",
+                provider=provider,
+                query=query,
+                model=model,
+            )
+        except (OSError, ValueError) as error:
+            status.remove_class("completed", "partial")
+            status.add_class("error")
+            status.update(f"Provider failed: {error}")
+            self.query_one("#real-data-report", Static).update(
+                "No contexts reconstructed. The previous experiment remains unchanged."
+            )
+            return
+        self._current_real_data = inputs
+        self._current_experiment = None
+        self._experiment_result = result.experiment
+        self._render_real_data_result(result)
+
+    def _render_real_data_result(self, result: RealDataExperimentResult) -> None:
+        status = self.query_one("#real-data-status", Static)
+        status.remove_class("error", "completed", "partial")
+        status.add_class(result.status)
+        status.update(
+            f"{result.status.title()}: {len(result.batch.contexts)} contexts, "
+            f"{len(result.batch.issues)} provider issues"
+        )
+        metadata = result.provider_metadata
+        inputs = metadata["inputs"]
+        lines = [
+            f"Provider: {metadata['provider']} v{metadata['version']}",
+            f"Assembly: {metadata['assembly']}",
+            f"FASTA: {inputs['fasta']['path']}",
+            f"VCF: {inputs['vcf']['path']}",
+        ]
+        if result.batch.issues:
+            lines.append("")
+            lines.append("[b]Exclusions[/b]")
+            lines.extend(
+                f"{issue.code} | {issue.record_id} | {issue.message}"
+                for issue in result.batch.issues
+            )
+        else:
+            lines.append("No provider exclusions.")
+        self.query_one("#real-data-report", Static).update("\n".join(lines))
+
+        if result.experiment is None:
+            return
+        source = (
+            f"Indexed FASTA/VCF | {result.query.anchor.source_name} | "
+            f"{result.query.anchor.sequence_id}:{result.query.anchor.position}"
+        )
+        self._experiment_source = source
+        self._render_experiment(result.experiment, source)
+        if result.batch.issues:
+            experiment_status = self.query_one("#experiment-status", Static)
+            experiment_status.remove_class("completed")
+            experiment_status.add_class("partial")
+            experiment_status.update(
+                f"Partial: {len(result.experiment.effects)} analyzed, "
+                f"{len(result.batch.issues)} provider issues"
+            )
+            self.query_one("#skipped-contexts", Static).update(
+                "[b]Provider exclusions[/b]\n"
+                + "\n".join(
+                    f"{issue.code}: {issue.message}" for issue in result.batch.issues
+                )
+            )
+        self.query_one("#main-tabs", TabbedContent).active = "experiment-tab"
+
+    def _read_real_data_inputs(self) -> RealDataInputs:
+        samples_value = self.query_one("#real-samples", Input).value
+        samples = tuple(
+            sample.strip() for sample in samples_value.split(",") if sample.strip()
+        )
+        model_value = self.query_one("#real-model", Select).value
+        if model_value is Select.NULL:
+            raise ValueError("development scorer must be selected")
+        return RealDataInputs(
+            fasta_path=self.query_one("#real-fasta", Input).value.strip(),
+            vcf_path=self.query_one("#real-vcf", Input).value.strip(),
+            assembly=self.query_one("#real-assembly", Input).value.strip(),
+            contig=self.query_one("#real-contig", Input).value.strip(),
+            position=int(self.query_one("#real-position", Input).value),
+            reference=self.query_one("#real-reference", Input).value,
+            alternate=self.query_one("#real-alternate", Input).value,
+            left_flank=int(self.query_one("#real-left-flank", Input).value),
+            right_flank=int(self.query_one("#real-right-flank", Input).value),
+            samples=samples or None,
+            model=str(model_value),
+            motif=self.query_one("#real-motif", Input).value,
+        )
 
     def _load_inspector_example(self) -> None:
         self.query_one("#source-type", Select).value = INSPECTOR_EXAMPLE["source_type"]

@@ -16,6 +16,7 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
+  "pysam>=0.23,<0.24",
   "textual>=8.2.8,<9",
 ]
 

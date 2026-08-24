@@ -1,7 +1,7 @@
-# Real-data readiness contract
+# Indexed FASTA/VCF provider contract
 
-PanContext's core is ready for a first real-data provider when the provider can translate its
-source records into `ExperimentContext` objects without changing experiment or model code.
+PanContext's first real-data provider translates indexed linear-reference and phased VCF
+records into `ExperimentContext` objects without changing experiment or model code.
 
 ## Provider input
 
@@ -14,12 +14,12 @@ A provider receives:
 It returns validated projected context records plus structured non-fatal issues. Provider
 context IDs must be unique.
 
-## First FASTA/VCF provider scope
+## Implemented FASTA/VCF provider scope
 
-The first real adapter should deliberately support:
+The adapter deliberately supports:
 
 - one indexed linear FASTA assembly;
-- one VCF containing biallelic small variants;
+- one indexed VCF/BCF containing biallelic small variants;
 - explicit assembly/source naming;
 - phased diploid genotypes when sample haplotypes are requested;
 - `ACGTN` sequence and literal alleles;
@@ -27,7 +27,7 @@ The first real adapter should deliberately support:
 - deterministic left/right-flank extraction;
 - source, sample, haplotype, contig, and input-file provenance.
 
-It should reject or issue structured exclusions for:
+It rejects the query or issues structured sample exclusions for:
 
 - symbolic alleles such as `<DEL>`;
 - breakends and translocations;
@@ -38,10 +38,10 @@ It should reject or issue structured exclusions for:
 - unsupported ploidy or missing genotype calls;
 - multiallelic records until allele selection is explicit.
 
-## Required headless fixtures
+## Headless fixtures
 
-The adapter must arrive with a tiny synthetic FASTA, index, VCF, and expected experiment
-report covering:
+The adapter includes a tiny synthetic FASTA, index, VCF, and expected experiment report
+covering:
 
 1. REF-observed and ALT-observed haplotypes;
 2. homozygous and heterozygous phased samples;
@@ -51,14 +51,28 @@ report covering:
 6. a boundary failure;
 7. deterministic provider metadata and issue ordering.
 
-## Policies that must remain explicit
+## Current explicit policies
 
-- Variant normalization and left alignment
-- Contig alias resolution
-- Strand orientation
-- Flank extraction at sequence boundaries
-- Fixed-length model input handling for indels
-- Treatment of `N` and later IUPAC ambiguity symbols
-- Sample and haplotype ordering
+- Variant normalization: exact VCF representation; no automatic normalization or left
+  alignment yet.
+- Contig aliases: exact names only.
+- Strand: forward reference orientation only.
+- Boundaries: the complete requested reference interval is required.
+- Indels: flanks are defined in reference coordinates, so reconstructed haplotype lengths
+  and focal offsets may differ.
+- Alphabet: literal `ACGTN` records only; later IUPAC symbols are not accepted.
+- Ordering: VCF-header sample order, then haplotype 1 and haplotype 2.
+- Overlapping records: an affected carrying sample is excluded rather than guessed.
+- FILTER: PASS records by default; carrying samples are excluded for filtered records.
 
 None of these may be hidden as an undocumented default.
+
+## Still missing from real-data support
+
+- automatic normalization and left alignment;
+- overlapping/compound variant resolution;
+- polyploid and partially phased genotypes;
+- contig alias maps and reverse-strand projection;
+- graph formats such as GFA/GBZ and assembly-to-assembly homology mapping;
+- cohort-scale batching across many focal variants;
+- production biological model adapters and fixed-length tokenization policies.

@@ -83,9 +83,9 @@ coordinate alias.
 
 ## Current limit
 
-The TUI lets us label the four source types, validate a local sequence, and calculate its
-content identifier. It does not yet verify that a manually entered source label is true,
-resolve homology, load a graph, or run a model.
+The TUI distinguishes five source types and can reconstruct phased VCF haplotypes against
+an indexed linear FASTA. Manually entered provenance remains a claim supplied by the user.
+PanContext does not yet resolve homology, load a graph, or run a biological model.
 
 ## Exercise
 

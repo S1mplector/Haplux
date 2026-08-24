@@ -28,6 +28,7 @@ from pancontext.experiment import (
     StabilitySummary,
     run_experiment,
 )
+from pancontext.fasta_vcf import FastaVcfProvider
 from pancontext.models import GCContentModel, MotifCountModel, ScalarModelAdapter
 from pancontext.providers import (
     AnchorLocus,
@@ -35,8 +36,10 @@ from pancontext.providers import (
     ContextQuery,
     ProviderBatch,
     ProviderIssue,
+    ProviderValidationError,
     WindowSpecification,
 )
+from pancontext.real_data import RealDataExperimentResult, run_provider_experiment
 
 __all__ = [
     "AnalysisRequest",
@@ -50,13 +53,16 @@ __all__ = [
     "ExperimentRequest",
     "ExperimentResult",
     "FocalVariant",
+    "FastaVcfProvider",
     "GCContentModel",
     "HaplotypeWindow",
     "MotifCountModel",
     "ObservedAllele",
     "ProviderBatch",
     "ProviderIssue",
+    "ProviderValidationError",
     "ReferenceMismatchError",
+    "RealDataExperimentResult",
     "SequenceContext",
     "SequenceProvenance",
     "SequenceValidationError",
@@ -68,6 +74,7 @@ __all__ = [
     "classify_variant",
     "ga4gh_sequence_id",
     "run_experiment",
+    "run_provider_experiment",
 ]
 
 __version__ = "0.1.0"

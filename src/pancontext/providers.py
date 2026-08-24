@@ -6,6 +6,10 @@ from typing import Any, Dict, Protocol, Tuple, runtime_checkable
 from pancontext.experiment import ExperimentContext, ExperimentValidationError, FocalVariant
 
 
+class ProviderValidationError(ExperimentValidationError):
+    """Raised when source files cannot satisfy a provider query safely."""
+
+
 @dataclass(frozen=True)
 class AnchorLocus:
     """A 1-based source locus used to begin context discovery or projection."""
@@ -81,6 +85,15 @@ class ProviderBatch:
             raise ExperimentValidationError("provider context IDs must be unique")
         object.__setattr__(self, "contexts", contexts)
         object.__setattr__(self, "issues", issues)
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "counts": {
+                "contexts": len(self.contexts),
+                "issues": len(self.issues),
+            },
+            "issues": [issue.as_dict() for issue in self.issues],
+        }
 
 
 @runtime_checkable

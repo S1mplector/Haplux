@@ -20,7 +20,7 @@ The suite currently covers:
 - VCF-to-internal coordinate conversion;
 - reference matching and bounds checking;
 - SNV, insertion, deletion, and multi-nucleotide substitution construction;
-- all four context-source types;
+- all five context-source types;
 - provenance and GA4GH refget content identity;
 - baseline versus synthetic alternate model inputs;
 - deterministic, versioned JSON serialization;
@@ -37,6 +37,11 @@ The suite currently covers:
 - paired-effect stability statistics;
 - strict experiment request parsing with precise field paths;
 - provider protocol and batch conformance;
+- indexed FASTA and tabix-indexed phased VCF reconstruction;
+- REF/ALT-observed haplotypes, upstream indel coordinate shifts, and focal indels;
+- boundary, contig, reference, multiallelic, unphased, and missing-call failures;
+- real-data CLI success and error behavior in-process and in a fresh process;
+- headless FASTA/VCF TUI loading and provider-error rendering;
 - fresh-process multi-context experiment execution.
 
 ## Run one analysis without the TUI
@@ -74,8 +79,9 @@ failure correctly.
 
 ## Not implemented yet
 
-No current test implies support for real FASTA, VCF, GFA, GBZ, model inference, or homology
-resolution. Those capabilities must arrive with fixtures and headless conformance tests.
+No current test implies support for GFA, GBZ, automatic variant normalization, biological
+model inference, or homology resolution. Those capabilities must arrive with fixtures and
+headless conformance tests.
 
 The requirements for the first such fixture suite are defined in
 [`real-data-readiness.md`](real-data-readiness.md).

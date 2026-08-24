@@ -32,23 +32,28 @@ provenance and a sequence-derived GA4GH refget identifier.
 
 ## Current milestone
 
-The first milestone establishes a precise representation for sequences, coordinates,
-and small variants. This is deliberately smaller than model inference: if coordinates
-or reference alleles are wrong, every downstream prediction is scientifically invalid.
+The current milestone establishes precise sequence and coordinate handling, paired
+multi-context experiments, and the first real-data adapter. Model inference remains a
+separate boundary: if coordinates or reference alleles are wrong, every downstream
+prediction is scientifically invalid.
 
 The current prototype can:
 
 - validate a local DNA haplotype window;
-- distinguish linear-reference, pangenome-path, de novo, and raw-sequence provenance;
+- distinguish linear-reference, phased-VCF-haplotype, pangenome-path, de novo, and
+  raw-sequence provenance;
 - calculate a coordinate-independent GA4GH refget identifier for the model input sequence;
 - convert a 1-based VCF position into a 0-based internal interval;
 - verify that the declared reference allele matches the sequence;
 - apply a small variant and emit a versioned, machine-readable result;
-- run the complete scientific analysis without opening the TUI.
+- run the complete scientific analysis without opening the TUI;
 - construct matched REF/ALT inputs when either allele was originally observed;
 - run multi-context experiments with explicit skipped-context reasons;
 - calculate descriptive effect stability using deterministic development adapters;
-- accept a strict, versioned experiment-request JSON document.
+- accept a strict, versioned experiment-request JSON document;
+- reconstruct local diploid haplotypes from indexed FASTA and phased VCF/BCF input;
+- apply supported nearby variants before locating the focal allele on each haplotype;
+- retain provider exclusions and input identities in a versioned real-data report.
 
 ## Run the TUI
 
@@ -71,9 +76,11 @@ analyzed. Enter a `pancontext.experiment-request.v1` JSON path and choose **Run 
 choose **Load demo** to restore the bundled request. The paired-effect table and stability
 cards are views over the same headless experiment engine used by the CLI.
 
-Press `1` for **Experiment**, `2` for **Context Inspector**, `Ctrl+R` to rerun the active
-workflow, `D` to restore the experiment demo, and `Q` to quit. The **Context Inspector**
-validates one projected sequence window and is useful for debugging provider output.
+Press `1` for **Experiment**, `2` for **FASTA + VCF**, `3` for **Context Inspector**,
+`Ctrl+R` to rerun the active workflow, `D` to restore the experiment demo, and `Q` to quit.
+The data loader reconstructs haplotypes and sends them to the Experiment dashboard. The
+inspector validates one projected sequence window and is useful for debugging provider
+output.
 
 In the inspector, the VCF position field is 1-based. Window starts and all internal
 coordinates are 0-based interbase coordinates; the result panel makes that conversion
@@ -116,6 +123,40 @@ Or invoke it directly:
 The GC-content and motif-count adapters are deterministic development instruments, not
 biological models.
 
+## Run indexed FASTA/VCF data
+
+The FASTA must have a `.fai` index. The VCF must be bgzip-compressed and have a `.tbi` or
+`.csi` index; BCF with a CSI index is also accepted by the underlying HTS reader. Contig
+names are exact: `chr1` and `1` are intentionally not guessed to be equivalent.
+
+Run the repository's indexed fixture end to end:
+
+```sh
+make real-data-example
+```
+
+For your own files:
+
+```sh
+.venv/bin/pancontext vcf-experiment \
+  --fasta /data/GRCh38.fa \
+  --vcf /data/cohort.vcf.gz \
+  --assembly GRCh38 \
+  --contig chr1 \
+  --position 103 \
+  --ref C \
+  --alt T \
+  --left-flank 512 \
+  --right-flank 512 \
+  --sample HG001 \
+  --pretty
+```
+
+Repeat `--sample` to select multiple samples, or omit it to inspect every VCF sample. The
+command emits `pancontext.real-data-experiment.v1`. A partial result is still written to
+standard output when compatible haplotypes exist; exclusions remain visible under
+`provider.issues`.
+
 Run the test suite with:
 
 ```sh
@@ -143,8 +184,9 @@ Start with:
 2. [`02-haplotypes-and-pangenomes.md`](docs/notes/02-haplotypes-and-pangenomes.md)
 3. [`03-reference-neutral-contexts-and-models.md`](docs/notes/03-reference-neutral-contexts-and-models.md)
 4. [`04-paired-effects-and-stability.md`](docs/notes/04-paired-effects-and-stability.md)
+5. [`05-phased-vcf-haplotype-reconstruction.md`](docs/notes/05-phased-vcf-haplotype-reconstruction.md)
 
-Before implementing a real FASTA/VCF loader, read
+The supported FASTA/VCF policies and remaining format boundaries are recorded in
 [`docs/real-data-readiness.md`](docs/real-data-readiness.md).
 
 ## Status and boundaries

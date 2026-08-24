@@ -1,6 +1,8 @@
 import unittest
 from pathlib import Path
+import tempfile
 
+import pysam
 from textual.widgets import Button, DataTable, Input, Select, Static, TabbedContent
 
 from pancontext.context import ContextSource
@@ -8,9 +10,34 @@ from pancontext.tui import PanContextApp
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
+FASTA_FIXTURE = FIXTURES / "mini.fa"
+VCF_FIXTURE = FIXTURES / "cohort.vcf"
 
 
 class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.temporary_directory = tempfile.TemporaryDirectory()
+        cls.indexed_vcf = Path(cls.temporary_directory.name) / "cohort.vcf.gz"
+        pysam.tabix_compress(str(VCF_FIXTURE), str(cls.indexed_vcf), force=True)
+        pysam.tabix_index(str(cls.indexed_vcf), preset="vcf", force=True)
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.temporary_directory.cleanup()
+
+    def fill_real_data_form(self, app: PanContextApp, *, contig: str = "chr1") -> None:
+        app.query_one("#real-fasta", Input).value = str(FASTA_FIXTURE)
+        app.query_one("#real-vcf", Input).value = str(self.indexed_vcf)
+        app.query_one("#real-assembly", Input).value = "mini-v1"
+        app.query_one("#real-contig", Input).value = contig
+        app.query_one("#real-position", Input).value = "21"
+        app.query_one("#real-reference", Input).value = "C"
+        app.query_one("#real-alternate", Input).value = "T"
+        app.query_one("#real-left-flank", Input).value = "10"
+        app.query_one("#real-right-flank", Input).value = "10"
+        app.query_one("#real-samples", Input).value = "HG_REF, HG_MIX"
+
     async def test_compact_terminal_layout_mounts_with_results(self) -> None:
         app = PanContextApp()
 
@@ -131,7 +158,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
         app = PanContextApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.press("2")
+            await pilot.press("3")
             app.query_one("#reference", Input).value = "G"
             await pilot.press("ctrl+r")
             await pilot.pause()
@@ -143,6 +170,50 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn(
                 "Validation failed",
                 str(app.query_one("#status", Static).render()),
+            )
+
+    async def test_real_data_workspace_reconstructs_and_routes_to_experiment(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            self.fill_real_data_form(app)
+            app.query_one("#run-real-data", Button).press()
+            await pilot.pause()
+
+            self.assertEqual(
+                app.query_one("#main-tabs", TabbedContent).active,
+                "experiment-tab",
+            )
+            self.assertEqual(
+                app.query_one("#experiment-table", DataTable).row_count,
+                4,
+            )
+            self.assertIn(
+                "Indexed FASTA/VCF",
+                str(app.query_one("#experiment-metadata", Static).render()),
+            )
+            self.assertIn(
+                "Completed: 4 contexts",
+                str(app.query_one("#real-data-status", Static).render()),
+            )
+
+    async def test_real_data_provider_error_remains_in_loader(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            self.fill_real_data_form(app, contig="1")
+            app.query_one("#run-real-data", Button).press()
+            await pilot.pause()
+
+            self.assertEqual(
+                app.query_one("#main-tabs", TabbedContent).active,
+                "real-data-tab",
+            )
+            self.assertIn(
+                "Provider failed",
+                str(app.query_one("#real-data-status", Static).render()),
             )
 
 

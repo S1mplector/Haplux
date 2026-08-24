@@ -18,6 +18,7 @@ class ContextSource(str, Enum):
     """Kinds of sequence source supported by PanContext's canonical boundary."""
 
     LINEAR_REFERENCE = "linear_reference"
+    PHASED_VCF_HAPLOTYPE = "phased_vcf_haplotype"
     PANGENOME_PATH = "pangenome_path"
     DE_NOVO_ASSEMBLY = "de_novo_assembly"
     RAW_SEQUENCE = "raw_sequence"
@@ -28,6 +29,7 @@ class ContextSource(str, Enum):
 
         return {
             ContextSource.LINEAR_REFERENCE: "Linear reference",
+            ContextSource.PHASED_VCF_HAPLOTYPE: "Phased VCF haplotype",
             ContextSource.PANGENOME_PATH: "Pangenome path",
             ContextSource.DE_NOVO_ASSEMBLY: "De novo assembly",
             ContextSource.RAW_SEQUENCE: "Raw sequence",

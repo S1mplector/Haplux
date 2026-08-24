@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: run test check analyze-example experiment-example
+.PHONY: run test check analyze-example experiment-example real-data-example
 
 run:
 	PYTHONPATH=src $(PYTHON) -m pancontext
@@ -28,4 +28,22 @@ analyze-example:
 experiment-example:
 	PYTHONPATH=src $(PYTHON) -m pancontext experiment \
 		--input tests/fixtures/experiment_request.json \
+		--pretty
+
+real-data-example:
+	@fixture_dir="$$(mktemp -d)"; \
+	trap 'rm -rf "$$fixture_dir"' EXIT; \
+	$(PYTHON) -c 'import pysam; pysam.tabix_compress("tests/fixtures/cohort.vcf", "'"$$fixture_dir"'/cohort.vcf.gz", force=True); pysam.tabix_index("'"$$fixture_dir"'/cohort.vcf.gz", preset="vcf", force=True)'; \
+	PYTHONPATH=src $(PYTHON) -m pancontext vcf-experiment \
+		--fasta tests/fixtures/mini.fa \
+		--vcf "$$fixture_dir/cohort.vcf.gz" \
+		--assembly mini-v1 \
+		--contig chr1 \
+		--position 21 \
+		--ref C \
+		--alt T \
+		--left-flank 10 \
+		--right-flank 10 \
+		--sample HG_REF \
+		--sample HG_MIX \
 		--pretty

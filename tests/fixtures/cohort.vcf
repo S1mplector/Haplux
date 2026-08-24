@@ -1,0 +1,8 @@
+##fileformat=VCFv4.3
+##contig=<ID=chr1,length=48>
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	HG_REF	HG_MIX	HG_HOMALT	UNPHASED	MISSING
+chr1	13	upstream-insertion	T	TAG	.	PASS	.	GT	0|0	1|0	0|0	0|0	0|0
+chr1	17	upstream-snv	A	G	.	PASS	.	GT	0|0	0|1	0|0	0|0	0|0
+chr1	21	focal-snv	C	T	.	PASS	.	GT	0|0	0|1	1|1	0/1	.|.
+chr1	25	downstream-deletion	GGG	G	.	PASS	.	GT	0|0	1|0	0|0	0|0	0|0
