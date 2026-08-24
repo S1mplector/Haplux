@@ -1,5 +1,11 @@
 import unittest
 
+from pancontext.context import (
+    ContextSource,
+    SequenceContext,
+    SequenceProvenance,
+    ga4gh_sequence_id,
+)
 from pancontext.domain import (
     HaplotypeWindow,
     ReferenceMismatchError,
@@ -18,6 +24,42 @@ class HaplotypeWindowTests(unittest.TestCase):
     def test_rejects_unsupported_dna_symbols(self) -> None:
         with self.assertRaisesRegex(SequenceValidationError, "unsupported DNA symbol"):
             HaplotypeWindow(sequence_id="chr1", start=0, sequence="ACXG")
+
+
+class SequenceContextTests(unittest.TestCase):
+    def test_computes_known_ga4gh_sequence_identifier(self) -> None:
+        self.assertEqual(
+            ga4gh_sequence_id("ACGT"),
+            "SQ.aKF498dAxcJAqme6QYQ7EZ07-fiw8Kw2",
+        )
+        self.assertEqual(ga4gh_sequence_id("ac gt\n"), ga4gh_sequence_id("ACGT"))
+
+    def test_preserves_source_provenance_separately_from_content_identity(self) -> None:
+        window = HaplotypeWindow(sequence_id="chr1", start=100, sequence="AACCGG")
+        reference = SequenceContext(
+            window=window,
+            provenance=SequenceProvenance(
+                source_type=ContextSource.LINEAR_REFERENCE,
+                source_name="GRCh38",
+            ),
+        )
+        assembly = SequenceContext(
+            window=window,
+            provenance=SequenceProvenance(
+                source_type=ContextSource.DE_NOVO_ASSEMBLY,
+                source_name="sample-assembly-v1",
+            ),
+        )
+
+        self.assertEqual(reference.content_id, assembly.content_id)
+        self.assertNotEqual(reference.provenance, assembly.provenance)
+
+    def test_rejects_blank_provenance_name(self) -> None:
+        with self.assertRaisesRegex(SequenceValidationError, "source name"):
+            SequenceProvenance(
+                source_type=ContextSource.RAW_SEQUENCE,
+                source_name="  ",
+            )
 
 
 class VariantTests(unittest.TestCase):
@@ -81,4 +123,3 @@ class VariantTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

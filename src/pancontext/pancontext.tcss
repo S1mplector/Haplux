@@ -1,15 +1,16 @@
 Screen {
-    background: #07111a;
-    color: #d7e3ea;
+    background: #111214;
+    color: #d6d7d9;
 }
 
 Header {
-    background: #0b1d29;
-    color: #f4fbff;
+    background: #1a1b1e;
+    color: #f0f0f0;
 }
 
 Footer {
-    background: #0b1d29;
+    background: #1a1b1e;
+    color: #d6d7d9;
 }
 
 #workspace {
@@ -19,8 +20,8 @@ Footer {
 
 #input-panel,
 #results-panel {
-    border: round #2a8195;
-    background: #0b1822;
+    border: round #4b4d52;
+    background: #191a1d;
     padding: 1 2;
 }
 
@@ -36,24 +37,63 @@ Footer {
 
 .panel-kicker {
     height: 1;
-    color: #63e6be;
+    color: #e2e2e3;
     text-style: bold;
     margin-bottom: 1;
 }
 
 .field-label {
-    color: #9fb7c3;
+    color: #adafb3;
     margin-top: 1;
 }
 
-Input {
+Input,
+Select {
     margin-bottom: 0;
-    border: tall #284b5c;
-    background: #07111a;
 }
 
-Input:focus {
-    border: tall #63e6be;
+Input,
+SelectCurrent {
+    border: tall #3d3f44;
+    background: #101113;
+    color: #e7e7e8;
+}
+
+Input:focus,
+Select:focus > SelectCurrent {
+    border: tall #92949a;
+}
+
+Select > SelectOverlay {
+    border: tall #5f6167;
+    background: #191a1d;
+    color: #e7e7e8;
+}
+
+Select > SelectOverlay > .option-list--option-highlighted {
+    background: #55575d;
+    color: #ffffff;
+}
+
+Button {
+    background: #2a2b2f;
+    color: #dedfe1;
+    border: tall #4b4d52;
+}
+
+Button:hover {
+    background: #3a3b40;
+    border: tall #777980;
+}
+
+Button.-primary {
+    background: #55575d;
+    color: #ffffff;
+    border: tall #777980;
+}
+
+Button.-primary:hover {
+    background: #66686f;
 }
 
 #allele-row {
@@ -81,31 +121,32 @@ Input:focus {
     height: auto;
     margin-top: 1;
     padding: 1;
-    color: #8fa7b3;
-    background: #102432;
-    border-left: thick #2a8195;
+    color: #b7b8bb;
+    background: #242529;
+    border-left: thick #5f6167;
 }
 
 #status {
     height: 3;
     padding: 1;
     margin-bottom: 1;
-    background: #102432;
-    border-left: thick #2a8195;
+    background: #242529;
+    border-left: thick #5f6167;
 }
 
 #status.success {
-    color: #b8f2df;
-    border-left: thick #38b27d;
+    color: #e3e3e4;
+    border-left: thick #8d8f95;
 }
 
 #status.error {
-    color: #ffc9c9;
-    border-left: thick #d95763;
+    color: #f1f1f2;
+    background: #303135;
+    border-left: thick #c7c8cb;
 }
 
 #coordinate-table {
-    height: 13;
+    height: 16;
     margin-bottom: 1;
 }
 
@@ -113,16 +154,16 @@ Input:focus {
     height: 7;
     padding: 1 2;
     margin-bottom: 1;
-    background: #07111a;
-    border: round #284b5c;
+    background: #101113;
+    border: round #3d3f44;
 }
 
 #interpretation {
     height: auto;
     min-height: 5;
     padding: 1 2;
-    color: #c2d2da;
-    background: #102432;
+    color: #c9cacc;
+    background: #242529;
 }
 
 Screen.-compact #workspace {
@@ -141,5 +182,5 @@ Screen.-compact #results-panel {
 }
 
 Screen.-compact #coordinate-table {
-    height: 12;
+    height: 15;
 }

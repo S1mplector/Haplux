@@ -1,8 +1,8 @@
 # PanContext
 
-PanContext is an early-stage research tool for asking whether a genomic model's
-prediction for the same focal variant remains stable across different human
-haplotype backgrounds.
+PanContext is an early-stage, reference-neutral research tool for asking whether a
+genomic model's prediction for the same focal variant remains stable across different
+human haplotype backgrounds.
 
 The intended research flow is:
 
@@ -16,6 +16,11 @@ variant + compatible haplotype windows
   stability, uncertainty, and context attribution
 ```
 
+Linear references are the first input adapter, not the product boundary. The architecture
+is intended to support pangenome paths, de novo assemblies, raw sequence inputs, and models
+that do not require reference coordinates. Every canonical context retains both its source
+provenance and a sequence-derived GA4GH refget identifier.
+
 ## Current milestone
 
 The first milestone establishes a precise representation for sequences, coordinates,
@@ -25,6 +30,8 @@ or reference alleles are wrong, every downstream prediction is scientifically in
 The current prototype can:
 
 - validate a local DNA haplotype window;
+- distinguish linear-reference, pangenome-path, de novo, and raw-sequence provenance;
+- calculate a coordinate-independent GA4GH refget identifier for the model input sequence;
 - convert a 1-based VCF position into a 0-based internal interval;
 - verify that the declared reference allele matches the sequence;
 - apply a small variant and emit a machine-readable result.
@@ -72,6 +79,7 @@ Start with:
 
 1. [`01-sequences-coordinates-and-variants.md`](docs/notes/01-sequences-coordinates-and-variants.md)
 2. [`02-haplotypes-and-pangenomes.md`](docs/notes/02-haplotypes-and-pangenomes.md)
+3. [`03-reference-neutral-contexts-and-models.md`](docs/notes/03-reference-neutral-contexts-and-models.md)
 
 ## Status and boundaries
 

@@ -92,7 +92,7 @@ normalization will become a dedicated PanContext milestone.
 For the sequence `AACCGG` beginning at internal coordinate 100:
 
 1. What internal interval corresponds to VCF position 104 with `REF=C`?
-2. What alternate sequence results from `C → G` there?
+2. What alternate sequence results from changing `C` to `G` there?
 3. Why should the software reject `REF=A` at that position?
 
 Answers: `[103, 104)`, `AACGGG`, and because the observed reference base is `C`, not `A`.
@@ -101,4 +101,3 @@ Answers: `[103, 104)`, `AACGGG`, and because the observed reference base is `C`,
 
 - [GA4GH HTS specifications and canonical VCF 4.5](https://github.com/samtools/hts-specs)
 - [GA4GH VRS Sequence Location](https://vrs.ga4gh.org/en/latest/concepts/LocationAndReference/SequenceLocation.html)
-
