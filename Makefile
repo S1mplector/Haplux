@@ -1,6 +1,6 @@
 PYTHON ?= .venv/bin/python
 
-.PHONY: run test check analyze-example
+.PHONY: run test check analyze-example experiment-example
 
 run:
 	PYTHONPATH=src $(PYTHON) -m pancontext
@@ -23,4 +23,9 @@ analyze-example:
 		--position 103 \
 		--ref C \
 		--alt T \
+		--pretty
+
+experiment-example:
+	PYTHONPATH=src $(PYTHON) -m pancontext experiment \
+		--input tests/fixtures/experiment_request.json \
 		--pretty

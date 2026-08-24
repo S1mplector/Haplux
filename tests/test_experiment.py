@@ -15,6 +15,18 @@ from pancontext.experiment import (
 from pancontext.models import GCContentModel
 
 
+class NonFiniteModel:
+    model_id = "non_finite"
+    version = "1"
+    output_name = "invalid"
+
+    def predict(self, sequence: str) -> float:
+        return float("nan")
+
+    def metadata(self) -> dict:
+        return {"adapter": self.model_id, "version": self.version}
+
+
 def context(
     context_id: str,
     *,
@@ -97,6 +109,16 @@ class ExperimentEngineTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertIsNone(result.stability)
         self.assertEqual(len(result.skipped_contexts), 1)
+
+    def test_rejects_non_finite_model_predictions_per_context(self) -> None:
+        result = run_experiment(
+            experiment_request(context("valid")),
+            NonFiniteModel(),
+        )
+
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.skipped_contexts[0].stage, "model-inference")
+        self.assertIn("finite", result.skipped_contexts[0].reason)
 
     def test_serializes_versioned_experiment_report(self) -> None:
         result = run_experiment(experiment_request(context("HG001-1")), GCContentModel())

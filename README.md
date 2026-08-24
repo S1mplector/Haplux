@@ -16,6 +16,15 @@ variant + compatible haplotype windows
   stability, uncertainty, and context attribution
 ```
 
+For each context, PanContext computes a paired model effect:
+
+```text
+effect_h = model(ALT in haplotype h) - model(REF in haplotype h)
+```
+
+Stability is then summarized across those paired effects rather than inferred from raw model
+scores alone.
+
 Linear references are the first input adapter, not the product boundary. The architecture
 is intended to support pangenome paths, de novo assemblies, raw sequence inputs, and models
 that do not require reference coordinates. Every canonical context retains both its source
@@ -36,6 +45,10 @@ The current prototype can:
 - verify that the declared reference allele matches the sequence;
 - apply a small variant and emit a versioned, machine-readable result;
 - run the complete scientific analysis without opening the TUI.
+- construct matched REF/ALT inputs when either allele was originally observed;
+- run multi-context experiments with explicit skipped-context reasons;
+- calculate descriptive effect stability using deterministic development adapters;
+- accept a strict, versioned experiment-request JSON document.
 
 ## Run the TUI
 
@@ -79,6 +92,23 @@ Use the same analysis engine without opening the interface:
 The command writes a `pancontext.analysis.v1` JSON report. Validation failures use standard
 error and exit code `2`, allowing scripts to stop on scientifically invalid input.
 
+Run the bundled multi-context experiment:
+
+```sh
+make experiment-example
+```
+
+Or invoke it directly:
+
+```sh
+.venv/bin/pancontext experiment \
+  --input tests/fixtures/experiment_request.json \
+  --pretty
+```
+
+The GC-content and motif-count adapters are deterministic development instruments, not
+biological models.
+
 Run the test suite with:
 
 ```sh
@@ -105,6 +135,10 @@ Start with:
 1. [`01-sequences-coordinates-and-variants.md`](docs/notes/01-sequences-coordinates-and-variants.md)
 2. [`02-haplotypes-and-pangenomes.md`](docs/notes/02-haplotypes-and-pangenomes.md)
 3. [`03-reference-neutral-contexts-and-models.md`](docs/notes/03-reference-neutral-contexts-and-models.md)
+4. [`04-paired-effects-and-stability.md`](docs/notes/04-paired-effects-and-stability.md)
+
+Before implementing a real FASTA/VCF loader, read
+[`docs/real-data-readiness.md`](docs/real-data-readiness.md).
 
 ## Status and boundaries
 

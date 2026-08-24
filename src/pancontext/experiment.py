@@ -1,6 +1,7 @@
 """Multi-context model-effect experiments and descriptive stability metrics."""
 
 from dataclasses import dataclass
+import json
 from math import isfinite
 from statistics import fmean, pstdev
 from typing import Any, Dict, Optional, Tuple
@@ -91,8 +92,8 @@ class ExperimentRequest:
         context_ids = [context.context_id for context in contexts]
         if len(set(context_ids)) != len(context_ids):
             raise ExperimentValidationError("context IDs must be unique within an experiment")
-        if self.zero_tolerance < 0:
-            raise ExperimentValidationError("zero tolerance must be non-negative")
+        if not isfinite(self.zero_tolerance) or self.zero_tolerance < 0:
+            raise ExperimentValidationError("zero tolerance must be finite and non-negative")
         object.__setattr__(self, "experiment_id", experiment_id)
         object.__setattr__(self, "contexts", contexts)
 
@@ -285,6 +286,14 @@ def run_experiment(
 ) -> ExperimentResult:
     """Construct paired inputs, score them, and summarize effects across contexts."""
 
+    model_metadata = model.metadata()
+    try:
+        json.dumps(model_metadata, allow_nan=False)
+    except (TypeError, ValueError) as error:
+        raise ModelValidationError(
+            "model metadata must be finite and JSON-serializable"
+        ) from error
+
     effects = []
     skipped = []
     focal = request.focal_variant
@@ -365,7 +374,7 @@ def run_experiment(
     )
     return ExperimentResult(
         request=request,
-        model_metadata=model.metadata(),
+        model_metadata=model_metadata,
         effects=tuple(effects),
         skipped_contexts=tuple(skipped),
         stability=stability,

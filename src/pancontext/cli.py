@@ -13,7 +13,7 @@ from pancontext.analysis import (
 )
 from pancontext.context import ContextSource
 from pancontext.experiment import EXPERIMENT_SCHEMA_VERSION, run_experiment
-from pancontext.experiment_io import parse_experiment_document
+from pancontext.experiment_io import load_experiment_file, parse_experiment_document
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -106,13 +106,15 @@ def _run_headless(arguments: argparse.Namespace) -> int:
 def _load_json_document(path: str) -> object:
     if path == "-":
         return json.load(sys.stdin)
-    with open(path, "r", encoding="utf-8") as input_file:
-        return json.load(input_file)
+    return None
 
 
 def _run_experiment_headless(arguments: argparse.Namespace) -> int:
     try:
-        parsed = parse_experiment_document(_load_json_document(arguments.input))
+        if arguments.input == "-":
+            parsed = parse_experiment_document(_load_json_document(arguments.input))
+        else:
+            parsed = load_experiment_file(arguments.input)
         result = run_experiment(parsed.request, parsed.model)
     except (OSError, json.JSONDecodeError, ValueError) as error:
         report = {

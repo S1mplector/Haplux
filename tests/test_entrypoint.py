@@ -2,6 +2,10 @@ import json
 import subprocess
 import sys
 import unittest
+from pathlib import Path
+
+
+EXPERIMENT_FIXTURE = Path(__file__).parent / "fixtures" / "experiment_request.json"
 
 
 def module_command(reference: str = "C") -> list:
@@ -53,6 +57,24 @@ class ModuleEntrypointTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 2)
         self.assertEqual(completed.stdout, "")
         self.assertEqual(json.loads(completed.stderr)["status"], "error")
+
+    def test_module_entrypoint_runs_multi_context_experiment(self) -> None:
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pancontext",
+                "experiment",
+                "--input",
+                str(EXPERIMENT_FIXTURE),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual(json.loads(completed.stdout)["counts"]["analyzed"], 2)
 
 
 if __name__ == "__main__":

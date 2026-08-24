@@ -6,6 +6,7 @@ from pathlib import Path
 from pancontext.experiment import ExperimentValidationError, run_experiment
 from pancontext.experiment_io import (
     EXPERIMENT_REQUEST_SCHEMA_VERSION,
+    load_experiment_file,
     parse_experiment_document,
 )
 
@@ -19,7 +20,7 @@ def fixture_document() -> dict:
 
 class ExperimentInputTests(unittest.TestCase):
     def test_parses_and_executes_versioned_fixture(self) -> None:
-        parsed = parse_experiment_document(fixture_document())
+        parsed = load_experiment_file(str(FIXTURE))
         result = run_experiment(parsed.request, parsed.model)
 
         self.assertEqual(parsed.request.experiment_id, "two-haplotype-demo")

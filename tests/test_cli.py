@@ -11,6 +11,10 @@ from pancontext.cli import main
 EXPERIMENT_FIXTURE = Path(__file__).parent / "fixtures" / "experiment_request.json"
 
 
+def experiment_document() -> dict:
+    return json.loads(EXPERIMENT_FIXTURE.read_text(encoding="utf-8"))
+
+
 def example_arguments() -> list:
     return [
         "analyze",
@@ -108,6 +112,25 @@ class HeadlessCommandTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "")
         self.assertEqual(report["status"], "error")
         self.assertIn("unsupported", report["error"]["message"])
+
+    def test_failed_experiment_uses_stderr_and_nonzero_exit(self) -> None:
+        document = experiment_document()
+        for context in document["experiment"]["contexts"]:
+            context["sequence"] = "AAGCGG"
+            context["vcf_position"] = 103
+            context["observed_allele"] = "reference"
+        stdin = io.StringIO(json.dumps(document))
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        with patch("sys.stdin", stdin), redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["experiment", "--input", "-"])
+
+        report = json.loads(stderr.getvalue())
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(report["status"], "failed")
+        self.assertEqual(report["counts"]["analyzed"], 0)
 
 
 if __name__ == "__main__":

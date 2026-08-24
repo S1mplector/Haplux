@@ -1,5 +1,6 @@
 """Strict versioned input parsing for headless context experiments."""
 
+import json
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
@@ -243,3 +244,10 @@ def parse_experiment_document(document: Any) -> ParsedExperiment:
     )
     model = create_builtin_model(adapter, parameters)
     return ParsedExperiment(request=request, model=model)
+
+
+def load_experiment_file(path: str) -> ParsedExperiment:
+    """Load and parse one UTF-8 JSON experiment request from disk."""
+
+    with open(path, "r", encoding="utf-8") as input_file:
+        return parse_experiment_document(json.load(input_file))
