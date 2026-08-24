@@ -3,6 +3,7 @@
 from pancontext.analysis import (
     AnalysisRequest,
     AnalysisResult,
+    ObservedAllele,
     analyze_variant,
     classify_variant,
 )
@@ -22,6 +23,7 @@ from pancontext.domain import (
 __all__ = [
     "AnalysisRequest",
     "AnalysisResult",
+    "ObservedAllele",
     "ContextSource",
     "HaplotypeWindow",
     "ReferenceMismatchError",

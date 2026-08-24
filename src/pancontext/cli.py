@@ -5,7 +5,12 @@ import json
 import sys
 from typing import List, Optional, Sequence
 
-from pancontext.analysis import AnalysisRequest, SCHEMA_VERSION, analyze_variant
+from pancontext.analysis import (
+    AnalysisRequest,
+    ObservedAllele,
+    SCHEMA_VERSION,
+    analyze_variant,
+)
 from pancontext.context import ContextSource
 
 
@@ -31,6 +36,11 @@ def _parser() -> argparse.ArgumentParser:
     analyze.add_argument("--position", type=int, required=True, dest="vcf_position")
     analyze.add_argument("--ref", required=True, dest="reference")
     analyze.add_argument("--alt", required=True, dest="alternate")
+    analyze.add_argument(
+        "--observed-allele",
+        choices=[allele.value for allele in ObservedAllele],
+        default=ObservedAllele.REFERENCE.value,
+    )
     analyze.add_argument("--sample-id")
     analyze.add_argument("--haplotype-id")
     analyze.add_argument(
@@ -51,6 +61,7 @@ def _request_from_args(arguments: argparse.Namespace) -> AnalysisRequest:
         vcf_position=arguments.vcf_position,
         reference=arguments.reference,
         alternate=arguments.alternate,
+        observed_allele=ObservedAllele(arguments.observed_allele),
         sample_id=arguments.sample_id,
         haplotype_id=arguments.haplotype_id,
     )

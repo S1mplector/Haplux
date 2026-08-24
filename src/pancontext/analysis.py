@@ -7,6 +7,7 @@ testable.
 """
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
 from pancontext.context import (
@@ -22,6 +23,13 @@ SCHEMA_VERSION = "pancontext.analysis.v1"
 CoordinateRow = Tuple[str, str, str]
 
 
+class ObservedAllele(str, Enum):
+    """Allele present in a supplied source context at the focal locus."""
+
+    REFERENCE = "reference"
+    ALTERNATE = "alternate"
+
+
 @dataclass(frozen=True)
 class AnalysisRequest:
     """Typed input contract shared by interactive and headless front ends."""
@@ -34,11 +42,13 @@ class AnalysisRequest:
     vcf_position: int
     reference: str
     alternate: str
+    observed_allele: ObservedAllele = ObservedAllele.REFERENCE
     sample_id: Optional[str] = None
     haplotype_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "source_type", ContextSource(self.source_type))
+        object.__setattr__(self, "observed_allele", ObservedAllele(self.observed_allele))
 
 
 @dataclass(frozen=True)
@@ -47,20 +57,38 @@ class AnalysisResult:
 
     context: SequenceContext
     variant: Variant
+    baseline_sequence: str
     alternate_sequence: str
+    observed_allele: ObservedAllele
     variant_kind: str
 
     @property
     def baseline_content_id(self) -> str:
-        """Return the identifier for the observed source window."""
+        """Return the identifier for the baseline model input."""
 
-        return self.context.content_id
+        return ga4gh_sequence_id(self.baseline_sequence)
 
     @property
     def alternate_content_id(self) -> str:
-        """Return the identifier for the synthetic alternate model input."""
+        """Return the identifier for the alternate model input."""
 
         return ga4gh_sequence_id(self.alternate_sequence)
+
+    @property
+    def baseline_construction(self) -> str:
+        """Describe whether the baseline was observed or constructed."""
+
+        if self.observed_allele is ObservedAllele.REFERENCE:
+            return "observed-context"
+        return "focal-reference-constructed"
+
+    @property
+    def alternate_construction(self) -> str:
+        """Describe whether the alternate was observed or constructed."""
+
+        if self.observed_allele is ObservedAllele.ALTERNATE:
+            return "observed-context"
+        return "focal-variant-applied"
 
     @property
     def status_text(self) -> str:
@@ -79,10 +107,10 @@ class AnalysisResult:
         provenance = self.context.provenance
         return (
             f"The VCF position {self.variant.start + 1} becomes internal start "
-            f"{self.variant.start}. The declared REF allele matches the supplied window, "
-            "so this sequence replacement is safe to pass to later model adapters. "
-            f"The observed input is {self.baseline_content_id}; the constructed alternate "
-            f"is {self.alternate_content_id}. Source provenance remains "
+            f"{self.variant.start}. The declared observed {self.observed_allele.value} "
+            "allele matches the supplied window, so the matched REF/ALT pair is safe to "
+            f"pass to later model adapters. The baseline input is {self.baseline_content_id}; "
+            f"the alternate input is {self.alternate_content_id}. Source provenance remains "
             f"{provenance.source_name}."
         )
 
@@ -95,7 +123,7 @@ class AnalysisResult:
         return (
             ("Context source", provenance.source_type.label, provenance.source_name),
             ("Sequence", window.sequence_id, window.sequence_id),
-            ("Baseline content ID", window.sequence, self.baseline_content_id),
+            ("Baseline content ID", self.baseline_sequence, self.baseline_content_id),
             ("Alternate content ID", self.alternate_sequence, self.alternate_content_id),
             ("Variant position", str(self.variant.start + 1), str(self.variant.start)),
             (
@@ -127,6 +155,8 @@ class AnalysisResult:
                     "haplotype_id": provenance.haplotype_id,
                 },
                 "sequence_id": window.sequence_id,
+                "observed_allele": self.observed_allele.value,
+                "observed_content_id": self.context.content_id,
                 "interval": {
                     "start": window.start,
                     "end": window.end,
@@ -148,14 +178,14 @@ class AnalysisResult:
             },
             "model_inputs": {
                 "baseline": {
-                    "sequence": window.sequence,
+                    "sequence": self.baseline_sequence,
                     "content_id": self.baseline_content_id,
-                    "construction": "observed-context",
+                    "construction": self.baseline_construction,
                 },
                 "alternate": {
                     "sequence": self.alternate_sequence,
                     "content_id": self.alternate_content_id,
-                    "construction": "focal-variant-applied",
+                    "construction": self.alternate_construction,
                 },
             },
         }
@@ -196,10 +226,23 @@ def analyze_variant(request: AnalysisRequest) -> AnalysisResult:
         reference=request.reference,
         alternate=request.alternate,
     )
-    alternate_sequence = variant.apply_to(window)
+    if request.observed_allele is ObservedAllele.REFERENCE:
+        baseline_sequence = window.sequence
+        alternate_sequence = variant.apply_to(window)
+    else:
+        reverse_variant = Variant.from_vcf(
+            sequence_id=request.sequence_id,
+            position=request.vcf_position,
+            reference=variant.alternate,
+            alternate=variant.reference,
+        )
+        baseline_sequence = reverse_variant.apply_to(window)
+        alternate_sequence = window.sequence
     return AnalysisResult(
         context=context,
         variant=variant,
+        baseline_sequence=baseline_sequence,
         alternate_sequence=alternate_sequence,
+        observed_allele=request.observed_allele,
         variant_kind=classify_variant(variant),
     )

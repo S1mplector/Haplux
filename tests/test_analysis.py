@@ -1,7 +1,12 @@
 import json
 import unittest
 
-from pancontext.analysis import AnalysisRequest, SCHEMA_VERSION, analyze_variant
+from pancontext.analysis import (
+    AnalysisRequest,
+    ObservedAllele,
+    SCHEMA_VERSION,
+    analyze_variant,
+)
 from pancontext.context import ContextSource
 from pancontext.domain import ReferenceMismatchError, SequenceValidationError
 
@@ -44,6 +49,20 @@ class AnalysisServiceTests(unittest.TestCase):
                 self.assertEqual(result.alternate_sequence, "AATCGG")
                 self.assertEqual(result.baseline_content_id, baseline.baseline_content_id)
                 self.assertEqual(result.context.provenance.source_type, source)
+
+    def test_constructs_a_matched_pair_when_alternate_was_observed(self) -> None:
+        result = analyze_variant(
+            example_request(
+                sequence="AATCGG",
+                observed_allele=ObservedAllele.ALTERNATE,
+            )
+        )
+
+        self.assertEqual(result.context.window.sequence, "AATCGG")
+        self.assertEqual(result.baseline_sequence, "AACCGG")
+        self.assertEqual(result.alternate_sequence, "AATCGG")
+        self.assertEqual(result.baseline_construction, "focal-reference-constructed")
+        self.assertEqual(result.alternate_construction, "observed-context")
 
     def test_classifies_supported_small_variant_shapes(self) -> None:
         cases = (
