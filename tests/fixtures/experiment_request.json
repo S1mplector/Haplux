@@ -1,0 +1,42 @@
+{
+  "schema_version": "pancontext.experiment-request.v1",
+  "experiment": {
+    "experiment_id": "two-haplotype-demo",
+    "focal_variant": {
+      "identifier": "example:C:T",
+      "reference": "C",
+      "alternate": "T"
+    },
+    "zero_tolerance": 0.0,
+    "contexts": [
+      {
+        "context_id": "HG001-1",
+        "source_type": "pangenome_path",
+        "source_name": "synthetic-test-graph",
+        "sequence_id": "path-HG001-1",
+        "window_start": 100,
+        "sequence": "AACCGG",
+        "vcf_position": 103,
+        "observed_allele": "reference",
+        "sample_id": "HG001",
+        "haplotype_id": "1"
+      },
+      {
+        "context_id": "HG002-2",
+        "source_type": "pangenome_path",
+        "source_name": "synthetic-test-graph",
+        "sequence_id": "path-HG002-2",
+        "window_start": 100,
+        "sequence": "GGAATCGG",
+        "vcf_position": 105,
+        "observed_allele": "alternate",
+        "sample_id": "HG002",
+        "haplotype_id": "2"
+      }
+    ]
+  },
+  "model": {
+    "adapter": "gc_content",
+    "parameters": {}
+  }
+}

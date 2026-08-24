@@ -12,6 +12,8 @@ from pancontext.analysis import (
     analyze_variant,
 )
 from pancontext.context import ContextSource
+from pancontext.experiment import EXPERIMENT_SCHEMA_VERSION, run_experiment
+from pancontext.experiment_io import parse_experiment_document
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -44,6 +46,20 @@ def _parser() -> argparse.ArgumentParser:
     analyze.add_argument("--sample-id")
     analyze.add_argument("--haplotype-id")
     analyze.add_argument(
+        "--pretty",
+        action="store_true",
+        help="indent JSON output for human inspection",
+    )
+    experiment = subparsers.add_parser(
+        "experiment",
+        help="run a versioned multi-context experiment document",
+    )
+    experiment.add_argument(
+        "--input",
+        required=True,
+        help="JSON request path, or - to read standard input",
+    )
+    experiment.add_argument(
         "--pretty",
         action="store_true",
         help="indent JSON output for human inspection",
@@ -87,6 +103,38 @@ def _run_headless(arguments: argparse.Namespace) -> int:
     return 0
 
 
+def _load_json_document(path: str) -> object:
+    if path == "-":
+        return json.load(sys.stdin)
+    with open(path, "r", encoding="utf-8") as input_file:
+        return json.load(input_file)
+
+
+def _run_experiment_headless(arguments: argparse.Namespace) -> int:
+    try:
+        parsed = parse_experiment_document(_load_json_document(arguments.input))
+        result = run_experiment(parsed.request, parsed.model)
+    except (OSError, json.JSONDecodeError, ValueError) as error:
+        report = {
+            "schema_version": EXPERIMENT_SCHEMA_VERSION,
+            "status": "error",
+            "error": {
+                "type": type(error).__name__,
+                "message": str(error),
+            },
+        }
+        print(json.dumps(report, sort_keys=True), file=sys.stderr)
+        return 2
+
+    indent = 2 if arguments.pretty else None
+    output = json.dumps(result.as_dict(), indent=indent, sort_keys=True)
+    if result.status == "failed":
+        print(output, file=sys.stderr)
+        return 2
+    print(output)
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Run the TUI by default or dispatch an explicit headless subcommand."""
 
@@ -100,4 +148,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parsed = _parser().parse_args(arguments)
     if parsed.command == "analyze":
         return _run_headless(parsed)
+    if parsed.command == "experiment":
+        return _run_experiment_headless(parsed)
     raise AssertionError(f"unhandled command: {parsed.command}")
