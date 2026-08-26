@@ -7,7 +7,7 @@ import pysam
 from textual.widgets import Button, DataTable, Input, Select, Static, TabbedContent
 
 from haplux.context import ContextSource
-from haplux.tui import HapluxApp
+from haplux.tui import FilePickerScreen, HapluxApp, PlainDirectoryTree
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -154,6 +154,57 @@ class HapluxAppTests(unittest.IsolatedAsyncioTestCase):
                 "two-haplotype-demo",
                 str(app.query_one("#experiment-metadata", Static).render()),
             )
+
+    async def test_file_browser_selects_experiment_json_inside_the_tui(self) -> None:
+        app = HapluxApp()
+
+        async with app.run_test(size=(120, 40)) as pilot:
+            app.query_one("#browse-experiment", Button).press()
+            await pilot.pause()
+
+            picker = app.screen
+            self.assertIsInstance(picker, FilePickerScreen)
+            self.assertEqual(picker.spec.target_id, "experiment-path")
+
+            picker._accept_path(FASTA_FIXTURE)
+            await pilot.pause()
+            self.assertIs(app.screen, picker)
+            self.assertIn(
+                "Unsupported file type",
+                str(picker.query_one("#file-picker-selection", Static).render()),
+            )
+
+            fixture = FIXTURES / "experiment_request.json"
+            picker._accept_path(fixture)
+            await pilot.pause()
+
+            self.assertNotIsInstance(app.screen, FilePickerScreen)
+            self.assertEqual(
+                app.query_one("#experiment-path", Input).value,
+                str(fixture.resolve()),
+            )
+
+    async def test_fasta_and_vcf_fields_open_targeted_tui_browsers(self) -> None:
+        app = HapluxApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            await pilot.press("2")
+            for button_id, target_id in (
+                ("browse-fasta", "real-fasta"),
+                ("browse-vcf", "real-vcf"),
+            ):
+                app.query_one(f"#{button_id}", Button).press()
+                await pilot.pause()
+                picker = app.screen
+                self.assertIsInstance(picker, FilePickerScreen)
+                self.assertEqual(picker.spec.target_id, target_id)
+                picker.action_cancel()
+                await pilot.pause()
+
+    def test_file_browser_tree_uses_text_markers_instead_of_emoji(self) -> None:
+        self.assertEqual(PlainDirectoryTree.ICON_NODE, "[+] ")
+        self.assertEqual(PlainDirectoryTree.ICON_NODE_EXPANDED, "[-] ")
+        self.assertEqual(PlainDirectoryTree.ICON_FILE, "[F] ")
 
     async def test_tab_shortcut_routes_ctrl_r_to_inspector(self) -> None:
         app = HapluxApp()
