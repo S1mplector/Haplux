@@ -6,8 +6,8 @@ import tempfile
 import pysam
 from textual.widgets import Button, DataTable, Input, Select, Static, TabbedContent
 
-from pancontext.context import ContextSource
-from pancontext.tui import PanContextApp
+from haplux.context import ContextSource
+from haplux.tui import HapluxApp
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -15,7 +15,7 @@ FASTA_FIXTURE = FIXTURES / "mini.fa"
 VCF_FIXTURE = FIXTURES / "cohort.vcf"
 
 
-class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
+class HapluxAppTests(unittest.IsolatedAsyncioTestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.temporary_directory = tempfile.TemporaryDirectory()
@@ -27,7 +27,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
     def tearDownClass(cls) -> None:
         cls.temporary_directory.cleanup()
 
-    def fill_real_data_form(self, app: PanContextApp, *, contig: str = "chr1") -> None:
+    def fill_real_data_form(self, app: HapluxApp, *, contig: str = "chr1") -> None:
         app.query_one("#real-fasta", Input).value = str(FASTA_FIXTURE)
         app.query_one("#real-vcf", Input).value = str(self.indexed_vcf)
         app.query_one("#real-assembly", Input).value = "mini-v1"
@@ -40,7 +40,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
         app.query_one("#real-samples", Input).value = "HG_REF, HG_MIX"
 
     async def test_compact_terminal_layout_mounts_with_results(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(80, 24)):
             status = app.query_one("#experiment-status", Static)
@@ -48,7 +48,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(app.screen.has_class("-compact"))
 
     async def test_demo_experiment_is_analyzed_on_mount(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)):
             tabs = app.query_one("#main-tabs", TabbedContent)
@@ -60,7 +60,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("three-haplotype-demo", str(metadata.render()))
 
     async def test_example_is_analyzed_on_mount(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)):
             status = app.query_one("#status", Static)
@@ -70,7 +70,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(table.row_count, 8)
 
     async def test_accepts_a_de_novo_context_without_changing_variant_logic(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             app.query_one("#main-tabs", TabbedContent).active = "inspector-tab"
@@ -85,7 +85,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(table.row_count, 8)
 
     async def test_reference_mismatch_stops_analysis(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             app.query_one("#main-tabs", TabbedContent).active = "inspector-tab"
@@ -99,7 +99,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(table.row_count, 0)
 
     async def test_buttons_restore_and_analyze_the_example_headlessly(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             app.query_one("#sequence", Input).value = "TTTT"
@@ -115,7 +115,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_experiment_file_error_is_rendered_without_crashing(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             app.query_one("#experiment-path", Input).value = "/not/a/real/experiment.json"
@@ -134,7 +134,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_experiment_fixture_runs_from_the_file_control(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             fixture = FIXTURES / "experiment_request.json"
@@ -156,7 +156,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_tab_shortcut_routes_ctrl_r_to_inspector(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.press("3")
@@ -174,7 +174,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_real_data_workspace_reconstructs_and_routes_to_experiment(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -200,7 +200,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_real_data_provider_error_remains_in_loader(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -218,7 +218,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_real_data_form_names_the_missing_field(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -238,7 +238,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_real_data_preview_explains_expected_work_unit(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -252,7 +252,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("C>T", readiness)
 
     async def test_real_data_input_rows_do_not_expand_vertically(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -264,7 +264,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(rows[1].region.y, rows[0].region.bottom)
 
     async def test_motif_scorer_requires_a_valid_motif(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("2")
@@ -314,7 +314,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             ),
             encoding="utf-8",
         )
-        app = PanContextApp(lesson_manifest=manifest)
+        app = HapluxApp(lesson_manifest=manifest)
 
         async with app.run_test(size=(140, 45)) as pilot:
             await pilot.press("l")
@@ -334,7 +334,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             )
 
     async def test_experiment_results_explain_context_dependence(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)):
             insight = str(app.query_one("#stability-interpretation", Static).render())
@@ -344,7 +344,7 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(table.columns), 6)
 
     async def test_highlighted_experiment_row_updates_context_detail(self) -> None:
-        app = PanContextApp()
+        app = HapluxApp()
 
         async with app.run_test(size=(140, 45)) as pilot:
             table = app.query_one("#experiment-table", DataTable)

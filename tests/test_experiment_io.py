@@ -3,8 +3,8 @@ import json
 import unittest
 from pathlib import Path
 
-from pancontext.experiment import ExperimentValidationError, run_experiment
-from pancontext.experiment_io import (
+from haplux.experiment import ExperimentValidationError, run_experiment
+from haplux.experiment_io import (
     EXPERIMENT_REQUEST_SCHEMA_VERSION,
     load_experiment_file,
     parse_experiment_document,

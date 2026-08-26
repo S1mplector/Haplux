@@ -1,4 +1,4 @@
-# Testing PanContext
+# Testing Haplux
 
 ## Rule
 
@@ -47,7 +47,7 @@ The suite currently covers:
 ## Run one analysis without the TUI
 
 ```sh
-.venv/bin/pancontext analyze \
+.venv/bin/haplux analyze \
   --source-type linear_reference \
   --source-name GRCh38 \
   --sequence-id chr1 \

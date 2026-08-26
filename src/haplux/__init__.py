@@ -1,25 +1,25 @@
-"""PanContext: context stability analysis for genomic model predictions."""
+"""Haplux: context stability analysis for genomic model predictions."""
 
-from pancontext.analysis import (
+from haplux.analysis import (
     AnalysisRequest,
     AnalysisResult,
     ObservedAllele,
     analyze_variant,
     classify_variant,
 )
-from pancontext.context import (
+from haplux.context import (
     ContextSource,
     SequenceContext,
     SequenceProvenance,
     ga4gh_sequence_id,
 )
-from pancontext.domain import (
+from haplux.domain import (
     HaplotypeWindow,
     ReferenceMismatchError,
     SequenceValidationError,
     Variant,
 )
-from pancontext.experiment import (
+from haplux.experiment import (
     ContextEffect,
     ExperimentContext,
     ExperimentRequest,
@@ -28,9 +28,9 @@ from pancontext.experiment import (
     StabilitySummary,
     run_experiment,
 )
-from pancontext.fasta_vcf import FastaVcfProvider
-from pancontext.models import GCContentModel, MotifCountModel, ScalarModelAdapter
-from pancontext.providers import (
+from haplux.fasta_vcf import FastaVcfProvider
+from haplux.models import GCContentModel, MotifCountModel, ScalarModelAdapter
+from haplux.providers import (
     AnchorLocus,
     ContextProvider,
     ContextQuery,
@@ -39,7 +39,7 @@ from pancontext.providers import (
     ProviderValidationError,
     WindowSpecification,
 )
-from pancontext.real_data import RealDataExperimentResult, run_provider_experiment
+from haplux.real_data import RealDataExperimentResult, run_provider_experiment
 
 __all__ = [
     "AnalysisRequest",

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Protocol, Tuple, runtime_checkable
 
-from pancontext.experiment import ExperimentContext, ExperimentValidationError, FocalVariant
+from haplux.experiment import ExperimentContext, ExperimentValidationError, FocalVariant
 
 
 class ProviderValidationError(ExperimentValidationError):

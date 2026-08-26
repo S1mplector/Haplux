@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pysam
 
-from pancontext.cli import main
+from haplux.cli import main
 
 
 EXPERIMENT_FIXTURE = Path(__file__).parent / "fixtures" / "experiment_request.json"
@@ -82,7 +82,7 @@ class HeadlessCommandTests(unittest.TestCase):
         ]
 
     def test_no_subcommand_routes_to_the_tui_without_exercising_a_terminal(self) -> None:
-        with patch("pancontext.tui.run") as run:
+        with patch("haplux.tui.run") as run:
             exit_code = main([])
 
         self.assertEqual(exit_code, 0)
@@ -201,7 +201,7 @@ class HeadlessCommandTests(unittest.TestCase):
         report = json.loads(stderr.getvalue())
         self.assertEqual(exit_code, 2)
         self.assertEqual(stdout.getvalue(), "")
-        self.assertEqual(report["schema_version"], "pancontext.real-data-experiment.v1")
+        self.assertEqual(report["schema_version"], "haplux.real-data-experiment.v1")
         self.assertEqual(report["status"], "error")
         self.assertIn("exact contig", report["error"]["message"])
 

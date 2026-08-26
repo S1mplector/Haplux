@@ -1,14 +1,14 @@
 import json
 import unittest
 
-from pancontext.analysis import (
+from haplux.analysis import (
     AnalysisRequest,
     ObservedAllele,
     SCHEMA_VERSION,
     analyze_variant,
 )
-from pancontext.context import ContextSource
-from pancontext.domain import ReferenceMismatchError, SequenceValidationError
+from haplux.context import ContextSource
+from haplux.domain import ReferenceMismatchError, SequenceValidationError
 
 
 def example_request(**overrides: object) -> AnalysisRequest:

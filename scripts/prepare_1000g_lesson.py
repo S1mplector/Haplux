@@ -119,7 +119,7 @@ def prepare(destination: Path) -> Dict[str, object]:
     vcf = _prepare_vcf(destination)
     validation = _validate_lesson(fasta, vcf)
     manifest = {
-        "dataset": "PanContext public lesson 01",
+        "dataset": "Haplux public lesson 01",
         "assembly": "GRCh38",
         "sources": {
             "reference": REFERENCE_URL,
@@ -148,7 +148,7 @@ def main() -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path(".pancontext-data/1000g-lesson"),
+        default=Path(".haplux-data/1000g-lesson"),
     )
     arguments = parser.parse_args()
     manifest = prepare(arguments.output)

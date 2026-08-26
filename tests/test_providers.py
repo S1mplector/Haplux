@@ -1,9 +1,9 @@
 import unittest
 
-from pancontext.analysis import ObservedAllele
-from pancontext.context import ContextSource
-from pancontext.experiment import ExperimentContext, ExperimentValidationError, FocalVariant
-from pancontext.providers import (
+from haplux.analysis import ObservedAllele
+from haplux.context import ContextSource
+from haplux.experiment import ExperimentContext, ExperimentValidationError, FocalVariant
+from haplux.providers import (
     AnchorLocus,
     ContextProvider,
     ContextQuery,

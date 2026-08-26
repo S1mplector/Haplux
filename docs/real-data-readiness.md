@@ -1,6 +1,6 @@
 # Indexed FASTA/VCF provider contract
 
-PanContext's first real-data provider translates indexed linear-reference and phased VCF
+Haplux's first real-data provider translates indexed linear-reference and phased VCF
 records into `ExperimentContext` objects without changing experiment or model code.
 
 ## Provider input

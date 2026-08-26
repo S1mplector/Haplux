@@ -17,7 +17,7 @@ def module_command(reference: str = "C") -> list:
     return [
         sys.executable,
         "-m",
-        "pancontext",
+        "haplux",
         "analyze",
         "--source-type",
         "linear_reference",
@@ -79,7 +79,7 @@ class ModuleEntrypointTests(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "pancontext",
+                "haplux",
                 "experiment",
                 "--input",
                 str(EXPERIMENT_FIXTURE),
@@ -97,7 +97,7 @@ class ModuleEntrypointTests(unittest.TestCase):
             [
                 sys.executable,
                 "-m",
-                "pancontext",
+                "haplux",
                 "vcf-experiment",
                 "--fasta",
                 str(FASTA_FIXTURE),

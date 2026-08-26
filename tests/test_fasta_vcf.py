@@ -4,17 +4,17 @@ from pathlib import Path
 
 import pysam
 
-from pancontext.analysis import ObservedAllele
-from pancontext.experiment import FocalVariant
-from pancontext.fasta_vcf import FastaVcfProvider
-from pancontext.models import GCContentModel
-from pancontext.providers import (
+from haplux.analysis import ObservedAllele
+from haplux.experiment import FocalVariant
+from haplux.fasta_vcf import FastaVcfProvider
+from haplux.models import GCContentModel
+from haplux.providers import (
     AnchorLocus,
     ContextQuery,
     ProviderValidationError,
     WindowSpecification,
 )
-from pancontext.real_data import run_provider_experiment
+from haplux.real_data import run_provider_experiment
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -184,7 +184,7 @@ class FastaVcfProviderTests(unittest.TestCase):
         report = result.as_dict()
 
         self.assertEqual(result.status, "completed")
-        self.assertEqual(report["schema_version"], "pancontext.real-data-experiment.v1")
+        self.assertEqual(report["schema_version"], "haplux.real-data-experiment.v1")
         self.assertEqual(report["provider"]["counts"]["contexts"], 6)
         self.assertEqual(report["experiment"]["counts"]["analyzed"], 6)
 

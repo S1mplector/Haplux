@@ -6,13 +6,13 @@ from math import isfinite
 from statistics import fmean, pstdev
 from typing import Any, Dict, Optional, Tuple
 
-from pancontext.analysis import AnalysisRequest, ObservedAllele, analyze_variant
-from pancontext.context import ContextSource
-from pancontext.domain import SequenceValidationError, Variant
-from pancontext.models import ModelValidationError, ScalarModelAdapter
+from haplux.analysis import AnalysisRequest, ObservedAllele, analyze_variant
+from haplux.context import ContextSource
+from haplux.domain import SequenceValidationError, Variant
+from haplux.models import ModelValidationError, ScalarModelAdapter
 
 
-EXPERIMENT_SCHEMA_VERSION = "pancontext.experiment.v1"
+EXPERIMENT_SCHEMA_VERSION = "haplux.experiment.v1"
 
 
 class ExperimentValidationError(ValueError):

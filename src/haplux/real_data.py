@@ -3,12 +3,12 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from pancontext.experiment import ExperimentRequest, ExperimentResult, run_experiment
-from pancontext.models import ScalarModelAdapter
-from pancontext.providers import ContextProvider, ContextQuery, ProviderBatch
+from haplux.experiment import ExperimentRequest, ExperimentResult, run_experiment
+from haplux.models import ScalarModelAdapter
+from haplux.providers import ContextProvider, ContextQuery, ProviderBatch
 
 
-REAL_DATA_SCHEMA_VERSION = "pancontext.real-data-experiment.v1"
+REAL_DATA_SCHEMA_VERSION = "haplux.real-data-experiment.v1"
 
 
 @dataclass(frozen=True)

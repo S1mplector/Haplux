@@ -1,6 +1,6 @@
-# PanContext
+# Haplux
 
-PanContext is an early-stage, reference-neutral research tool for asking whether a
+Haplux is an early-stage, reference-neutral research tool for asking whether a
 genomic model's prediction for the same focal variant remains stable across different
 human haplotype backgrounds.
 
@@ -16,7 +16,7 @@ variant + compatible haplotype windows
   stability, uncertainty, and context attribution
 ```
 
-For each context, PanContext computes a paired model effect:
+For each context, Haplux computes a paired model effect:
 
 ```text
 effect_h = model(ALT in haplotype h) - model(REF in haplotype h)
@@ -65,14 +65,14 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -e .
 ```
 
-Then launch the PanContext workspace:
+Then launch the Haplux workspace:
 
 ```sh
-.venv/bin/pancontext
+.venv/bin/haplux
 ```
 
 The TUI opens on the **Experiment** workspace with a three-haplotype demonstration already
-analyzed. Enter a `pancontext.experiment-request.v1` JSON path and choose **Run file**, or
+analyzed. Enter a `haplux.experiment-request.v1` JSON path and choose **Run file**, or
 choose **Load demo** to restore the bundled request. The paired-effect table and stability
 cards are views over the same headless experiment engine used by the CLI.
 
@@ -81,7 +81,10 @@ Press `1` for **Experiment**, `2` for **FASTA + VCF**, `3` for **Context Inspect
 demo, `L` to load the prepared public lesson, and `Q` to quit. The guided data loader marks
 required fields, checks local files and indexes as you type, previews the requested sequence
 length and maximum context count, reconstructs haplotypes, and sends successful runs to the
-Experiment dashboard. The inspector validates one projected sequence window and is useful
+Experiment dashboard. Every file-path field has a **Browse** button that opens an in-TUI
+file tree; no graphical operating-system picker is used. Navigate with the arrow keys,
+press Enter to open a directory or select a compatible file, and use Backspace to move to
+the parent directory. The inspector validates one projected sequence window and is useful
 for debugging provider output.
 
 In the Experiment workspace, focus the paired-effects table and move with the arrow keys.
@@ -97,7 +100,7 @@ visible.
 Use the same analysis engine without opening the interface:
 
 ```sh
-.venv/bin/pancontext analyze \
+.venv/bin/haplux analyze \
   --source-type linear_reference \
   --source-name GRCh38 \
   --sequence-id chr1 \
@@ -109,7 +112,7 @@ Use the same analysis engine without opening the interface:
   --pretty
 ```
 
-The command writes a `pancontext.analysis.v1` JSON report. Validation failures use standard
+The command writes a `haplux.analysis.v1` JSON report. Validation failures use standard
 error and exit code `2`, allowing scripts to stop on scientifically invalid input.
 
 Run the bundled multi-context experiment:
@@ -121,7 +124,7 @@ make experiment-example
 Or invoke it directly:
 
 ```sh
-.venv/bin/pancontext experiment \
+.venv/bin/haplux experiment \
   --input tests/fixtures/experiment_request.json \
   --pretty
 ```
@@ -144,7 +147,7 @@ make real-data-example
 For your own files:
 
 ```sh
-.venv/bin/pancontext vcf-experiment \
+.venv/bin/haplux vcf-experiment \
   --fasta /data/GRCh38.fa \
   --vcf /data/cohort.vcf.gz \
   --assembly GRCh38 \
@@ -159,7 +162,7 @@ For your own files:
 ```
 
 Repeat `--sample` to select multiple samples, or omit it to inspect every VCF sample. The
-command emits `pancontext.real-data-experiment.v1`. A partial result is still written to
+command emits `haplux.real-data-experiment.v1`. A partial result is still written to
 standard output when compatible haplotypes exist; exclusions remain visible under
 `provider.issues`.
 
@@ -171,7 +174,7 @@ make public-lesson
 
 This downloads Ensembl's GRCh38 chromosome 22 reference and extracts a two-kilobase,
 three-sample slice from the indexed 1000 Genomes phased VCF. Generated data stays under
-`.pancontext-data/` and is not committed to Git. Once prepared, press `L` in the TUI or
+`.haplux-data/` and is not committed to Git. Once prepared, press `L` in the TUI or
 choose **Load public lesson**. The preset uses a motif-count experiment designed to expose
 one genuine context-dependent result across the six reconstructed chromosome copies.
 
@@ -187,7 +190,7 @@ boundary.
 ## Repository map
 
 ```text
-src/pancontext/       scientific domain layer and terminal interface
+src/haplux/       scientific domain layer and terminal interface
 tests/                executable behavior specifications
 docs/notes/           bioinformatics learning notes
 docs/decisions/       architectural decisions and invariants
@@ -209,6 +212,6 @@ The supported FASTA/VCF policies and remaining format boundaries are recorded in
 
 ## Status and boundaries
 
-PanContext is pre-alpha research software. It does not provide clinical interpretation,
+Haplux is pre-alpha research software. It does not provide clinical interpretation,
 diagnosis, or patient-specific recommendations. The first releases will use public data
 and explicitly non-clinical evaluation claims.

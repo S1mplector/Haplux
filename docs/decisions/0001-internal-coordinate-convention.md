@@ -6,13 +6,13 @@ Accepted for the initial prototype.
 
 ## Context
 
-PanContext will ingest formats and APIs with different coordinate conventions. VCF uses
+Haplux will ingest formats and APIs with different coordinate conventions. VCF uses
 a 1-based position, while graph libraries, Python slices, BED-like intervals, and GA4GH
 VRS commonly use 0-based boundaries or half-open intervals.
 
 ## Decision
 
-All PanContext domain objects use 0-based, half-open interbase intervals: `[start, end)`.
+All Haplux domain objects use 0-based, half-open interbase intervals: `[start, end)`.
 Adapters must convert external coordinates at ingestion and record the source convention.
 
 ## Consequences

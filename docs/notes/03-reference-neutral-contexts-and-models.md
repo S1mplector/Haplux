@@ -2,7 +2,7 @@
 
 ## Two independent questions
 
-For every model input, PanContext must answer:
+For every model input, Haplux must answer:
 
 1. Where did this sequence come from?
 2. What sequence did the model actually receive?
@@ -23,7 +23,7 @@ though their coordinate systems and biological provenance differ.
 ## Reference-free does not mean identity-free
 
 A reference-free model may accept only a DNA string. It does not need to know whether that
-string came from GRCh38, a pangenome path, or a new assembly. PanContext still needs that
+string came from GRCh38, a pangenome path, or a new assembly. Haplux still needs that
 information to reproduce and interpret the comparison.
 
 Likewise, two equal strings are not automatically the same biological locus. Short DNA
@@ -33,7 +33,7 @@ specific flanking sequence.
 
 ## Context providers and model adapters
 
-PanContext will separate acquisition from inference:
+Haplux will separate acquisition from inference:
 
 ```text
 FASTA/VCF       pangenome graph       de novo contig       raw sequence
@@ -85,7 +85,7 @@ coordinate alias.
 
 The TUI distinguishes five source types and can reconstruct phased VCF haplotypes against
 an indexed linear FASTA. Manually entered provenance remains a claim supplied by the user.
-PanContext does not yet resolve homology, load a graph, or run a biological model.
+Haplux does not yet resolve homology, load a graph, or run a biological model.
 
 ## Exercise
 

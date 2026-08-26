@@ -16,7 +16,7 @@ The subtraction is paired: every other base in the two inputs should remain the 
 
 ## Observed versus constructed
 
-A real haplotype may already carry REF or ALT. PanContext records that fact and constructs
+A real haplotype may already carry REF or ALT. Haplux records that fact and constructs
 the missing counterfactual:
 
 ```text
@@ -28,7 +28,7 @@ This distinction is provenance, not a change to the biological question.
 
 ## Descriptive stability
 
-Across context effects, PanContext currently reports:
+Across context effects, Haplux currently reports:
 
 - **Mean effect:** average paired effect.
 - **Effect range:** maximum minus minimum effect.
@@ -41,7 +41,7 @@ The zero tolerance is explicit because floating-point model outputs may contain 
 that should be treated as zero for sign summaries.
 
 These are descriptive statistics. A large range is not automatically a biological discovery,
-and PanContext does not yet assign significance or confidence intervals.
+and Haplux does not yet assign significance or confidence intervals.
 
 ## Invalid contexts
 

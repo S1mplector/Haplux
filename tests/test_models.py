@@ -1,6 +1,6 @@
 import unittest
 
-from pancontext.models import (
+from haplux.models import (
     GCContentModel,
     ModelValidationError,
     MotifCountModel,

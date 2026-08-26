@@ -223,6 +223,75 @@ Button.-primary:hover {
     margin-right: 1;
 }
 
+.file-input-row {
+    height: 3;
+}
+
+.file-input-row Input {
+    width: 1fr;
+}
+
+.file-input-row Button {
+    width: 12;
+    min-width: 12;
+    margin-left: 1;
+}
+
+FilePickerScreen {
+    align: center middle;
+    background: #0b0c0e 80%;
+}
+
+#file-picker-dialog {
+    width: 88%;
+    max-width: 120;
+    height: 88%;
+    padding: 1 2;
+    background: #191a1d;
+    border: round #777980;
+}
+
+#file-picker-expected,
+#file-picker-help {
+    height: auto;
+    color: #aeb0b4;
+}
+
+#file-picker-location,
+#file-picker-selection {
+    height: auto;
+    min-height: 3;
+    padding: 1 2;
+    background: #101113;
+    border-left: thick #5f6167;
+}
+
+.file-picker-nav,
+.file-picker-actions {
+    height: 3;
+    margin: 1 0;
+}
+
+.file-picker-nav Button,
+.file-picker-actions Button {
+    margin-right: 1;
+}
+
+#file-picker-tree {
+    height: 1fr;
+    padding: 1;
+    background: #101113;
+    border: round #3d3f44;
+}
+
+#file-picker-tree:focus {
+    border: round #92949a;
+}
+
+#file-picker-selection {
+    margin-top: 1;
+}
+
 .preset-row {
     margin-bottom: 1;
 }

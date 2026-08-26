@@ -4,7 +4,7 @@
 
 A **sequence** is an ordered string of biological residues. For DNA, the canonical
 bases are A, C, G, and T. N is often used when the base is unknown. Real formats may
-also use additional IUPAC ambiguity symbols; PanContext deliberately starts with the
+also use additional IUPAC ambiguity symbols; Haplux deliberately starts with the
 smaller `ACGTN` alphabet and will expand when real input requires it.
 
 A **reference sequence** is the sequence used as the coordinate system for describing
@@ -76,7 +76,7 @@ REF=ACC  ALT=A
 means that `CC` is deleted after the shared `A`. Other standards may represent the same
 biological change using an empty replacement sequence and a minimal interval. Equivalent
 biological variants can therefore have different textual representations. Variant
-normalization will become a dedicated PanContext milestone.
+normalization will become a dedicated Haplux milestone.
 
 ## Rules to write down
 

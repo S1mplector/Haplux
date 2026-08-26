@@ -4,18 +4,18 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
-from pancontext.analysis import ObservedAllele
-from pancontext.context import ContextSource
-from pancontext.experiment import (
+from haplux.analysis import ObservedAllele
+from haplux.context import ContextSource
+from haplux.experiment import (
     ExperimentContext,
     ExperimentRequest,
     ExperimentValidationError,
     FocalVariant,
 )
-from pancontext.models import ScalarModelAdapter, create_builtin_model
+from haplux.models import ScalarModelAdapter, create_builtin_model
 
 
-EXPERIMENT_REQUEST_SCHEMA_VERSION = "pancontext.experiment-request.v1"
+EXPERIMENT_REQUEST_SCHEMA_VERSION = "haplux.experiment-request.v1"
 
 
 @dataclass(frozen=True)

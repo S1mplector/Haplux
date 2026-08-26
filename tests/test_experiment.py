@@ -1,9 +1,9 @@
 import json
 import unittest
 
-from pancontext.analysis import ObservedAllele
-from pancontext.context import ContextSource
-from pancontext.experiment import (
+from haplux.analysis import ObservedAllele
+from haplux.context import ContextSource
+from haplux.experiment import (
     EXPERIMENT_SCHEMA_VERSION,
     ExperimentContext,
     ExperimentRequest,
@@ -12,7 +12,7 @@ from pancontext.experiment import (
     StabilitySummary,
     run_experiment,
 )
-from pancontext.models import GCContentModel
+from haplux.models import GCContentModel
 
 
 class NonFiniteModel:

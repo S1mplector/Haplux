@@ -13,7 +13,7 @@ window contains REF would also exclude valid contexts or misstate provenance.
 
 ## Decision
 
-For each compatible context, PanContext constructs a matched pair that preserves the same
+For each compatible context, Haplux constructs a matched pair that preserves the same
 neighboring haplotype background:
 
 ```text
@@ -23,7 +23,7 @@ effect_h    = model(alternate_h) - model(baseline_h)
 ```
 
 The source record explicitly states whether REF or ALT was observed. The other member of
-the pair is marked as constructed. PanContext compares `effect_h` across contexts and keeps
+the pair is marked as constructed. Haplux compares `effect_h` across contexts and keeps
 raw baseline and alternate predictions for auditing.
 
 The first stability report is descriptive: mean, minimum, maximum, range, population

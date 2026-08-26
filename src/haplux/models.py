@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Mapping, Protocol, runtime_checkable
 
-from pancontext.domain import HaplotypeWindow, SequenceValidationError
+from haplux.domain import HaplotypeWindow, SequenceValidationError
 
 
 class ModelValidationError(ValueError):

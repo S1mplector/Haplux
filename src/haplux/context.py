@@ -1,7 +1,7 @@
 """Reference-neutral sequence context identity and provenance.
 
 Coordinates say where a sequence came from within a source. Content identifiers
-say what the sequence is. PanContext keeps both because neither one is enough for
+say what the sequence is. Haplux keeps both because neither one is enough for
 reproducible comparisons across references, graph paths, and assemblies.
 """
 
@@ -11,11 +11,11 @@ from enum import Enum
 from hashlib import sha512
 from typing import Optional
 
-from pancontext.domain import HaplotypeWindow, SequenceValidationError
+from haplux.domain import HaplotypeWindow, SequenceValidationError
 
 
 class ContextSource(str, Enum):
-    """Kinds of sequence source supported by PanContext's canonical boundary."""
+    """Kinds of sequence source supported by Haplux's canonical boundary."""
 
     LINEAR_REFERENCE = "linear_reference"
     PHASED_VCF_HAPLOTYPE = "phased_vcf_haplotype"

@@ -10,9 +10,11 @@ from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     DataTable,
+    DirectoryTree,
     Footer,
     Header,
     Input,
@@ -21,21 +23,22 @@ from textual.widgets import (
     Static,
     TabbedContent,
     TabPane,
+    Tree,
 )
 
-from pancontext.analysis import AnalysisRequest, AnalysisResult, analyze_variant
-from pancontext.context import ContextSource
-from pancontext.demo import experiment_demo_document
-from pancontext.experiment import ContextEffect, ExperimentResult, FocalVariant, run_experiment
-from pancontext.experiment_io import (
+from haplux.analysis import AnalysisRequest, AnalysisResult, analyze_variant
+from haplux.context import ContextSource
+from haplux.demo import experiment_demo_document
+from haplux.experiment import ContextEffect, ExperimentResult, FocalVariant, run_experiment
+from haplux.experiment_io import (
     ParsedExperiment,
     load_experiment_file,
     parse_experiment_document,
 )
-from pancontext.fasta_vcf import FastaVcfProvider
-from pancontext.models import create_builtin_model
-from pancontext.providers import AnchorLocus, ContextQuery, WindowSpecification
-from pancontext.real_data import RealDataExperimentResult, run_provider_experiment
+from haplux.fasta_vcf import FastaVcfProvider
+from haplux.models import create_builtin_model
+from haplux.providers import AnchorLocus, ContextQuery, WindowSpecification
+from haplux.real_data import RealDataExperimentResult, run_provider_experiment
 
 
 INSPECTOR_EXAMPLE = {
@@ -67,7 +70,39 @@ REAL_DATA_FIELD_IDS = {
     "real-samples",
     "real-motif",
 }
-DEFAULT_LESSON_MANIFEST = Path(".pancontext-data/1000g-lesson/manifest.json")
+DEFAULT_LESSON_MANIFEST = Path(".haplux-data/1000g-lesson/manifest.json")
+
+
+@dataclass(frozen=True)
+class FilePickerSpec:
+    """Describe one file input and the formats selectable from its browser."""
+
+    target_id: str
+    title: str
+    expected: str
+    suffixes: Tuple[str, ...]
+
+
+FILE_PICKERS = {
+    "browse-experiment": FilePickerSpec(
+        target_id="experiment-path",
+        title="Select experiment request",
+        expected="Haplux experiment request (.json)",
+        suffixes=(".json",),
+    ),
+    "browse-fasta": FilePickerSpec(
+        target_id="real-fasta",
+        title="Select reference FASTA",
+        expected="Reference sequence (.fa, .fasta, .fna, optionally compressed)",
+        suffixes=(".fa", ".fasta", ".fna", ".fa.gz", ".fasta.gz", ".fna.gz"),
+    ),
+    "browse-vcf": FilePickerSpec(
+        target_id="real-vcf",
+        title="Select phased variants",
+        expected="Indexed variant data (.vcf.gz or .bcf)",
+        suffixes=(".vcf.gz", ".bcf"),
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -96,12 +131,133 @@ class FormIssue:
     message: str
 
 
-class PanContextApp(App[None]):
-    """Interactive client backed exclusively by headless PanContext services."""
+class PlainDirectoryTree(DirectoryTree):
+    """Directory tree whose markers remain text rather than platform emoji."""
 
-    TITLE = "PanContext"
+    ICON_NODE_EXPANDED = "[-] "
+    ICON_NODE = "[+] "
+    ICON_FILE = "[F] "
+
+
+class FilePickerScreen(ModalScreen[Optional[str]]):
+    """Keyboard-first file browser rendered entirely inside the terminal."""
+
+    BINDINGS = [
+        ("escape", "cancel", "Cancel"),
+        ("backspace", "parent", "Parent"),
+    ]
+
+    def __init__(self, spec: FilePickerSpec, start_path: Path) -> None:
+        super().__init__()
+        self.spec = spec
+        self.start_path = start_path
+        self._candidate: Optional[Path] = None
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="file-picker-dialog"):
+            yield Static(self.spec.title.upper(), classes="panel-kicker")
+            yield Static(self.spec.expected, id="file-picker-expected")
+            yield Static(str(self.start_path), id="file-picker-location")
+            with Horizontal(classes="file-picker-nav"):
+                yield Button("Parent", id="file-picker-parent")
+                yield Button("Home", id="file-picker-home")
+                yield Button("Working directory", id="file-picker-cwd")
+            yield PlainDirectoryTree(self.start_path, id="file-picker-tree")
+            yield Static(
+                "Arrow keys navigate. Enter opens a directory or chooses a compatible file.",
+                id="file-picker-help",
+            )
+            yield Static("No file selected.", id="file-picker-selection")
+            with Horizontal(classes="file-picker-actions"):
+                yield Button(
+                    "Select file",
+                    id="file-picker-select",
+                    variant="primary",
+                    disabled=True,
+                )
+                yield Button("Cancel", id="file-picker-cancel")
+
+    def on_mount(self) -> None:
+        self.query_one("#file-picker-tree", PlainDirectoryTree).focus()
+
+    def on_tree_node_highlighted(self, event: Tree.NodeHighlighted) -> None:
+        """Preview the highlighted file and enable selection when compatible."""
+
+        if event.control.id != "file-picker-tree" or event.node.data is None:
+            return
+        path = event.node.data.path
+        if not path.is_file():
+            self._set_candidate(None, "Choose a file from this directory.")
+            return
+        if not self._is_compatible(path):
+            self._set_candidate(
+                None,
+                f"Unsupported file type: {path.name}. Expected {self.spec.expected}.",
+            )
+            return
+        self._set_candidate(path.resolve(), str(path.resolve()))
+
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
+        """Accept Enter or click selection without requiring an OS file dialog."""
+
+        self._accept_path(event.path)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        button_id = event.button.id
+        if button_id == "file-picker-select" and self._candidate is not None:
+            self.dismiss(str(self._candidate))
+        elif button_id == "file-picker-cancel":
+            self.action_cancel()
+        elif button_id == "file-picker-parent":
+            self.action_parent()
+        elif button_id == "file-picker-home":
+            self._change_root(Path.home())
+        elif button_id == "file-picker-cwd":
+            self._change_root(Path.cwd())
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+    def action_parent(self) -> None:
+        tree = self.query_one("#file-picker-tree", PlainDirectoryTree)
+        self._change_root(tree.path.expanduser().resolve().parent)
+
+    def _change_root(self, path: Path) -> None:
+        root = path.expanduser().resolve()
+        tree = self.query_one("#file-picker-tree", PlainDirectoryTree)
+        tree.path = root
+        self.query_one("#file-picker-location", Static).update(str(root))
+        self._set_candidate(None, "Choose a file from this directory.")
+        tree.focus()
+
+    def _accept_path(self, path: Path) -> None:
+        if self._is_compatible(path):
+            self.dismiss(str(path.expanduser().resolve()))
+            return
+        self._set_candidate(
+            None,
+            f"Unsupported file type: {path.name}. Expected {self.spec.expected}.",
+        )
+
+    def _set_candidate(self, path: Optional[Path], message: str) -> None:
+        self._candidate = path
+        self.query_one("#file-picker-select", Button).disabled = path is None
+        self.query_one("#file-picker-selection", Static).update(message)
+
+    def _is_compatible(self, path: Path) -> bool:
+        name = path.name.lower()
+        return path.is_file() and any(name.endswith(suffix) for suffix in self.spec.suffixes)
+
+
+class HapluxApp(App[None]):
+    """Interactive client backed exclusively by headless Haplux services."""
+
+    TITLE = "Haplux"
     SUB_TITLE = "Haplotype context stability laboratory"
-    CSS_PATH = "pancontext.tcss"
+    CSS_PATH = "haplux.tcss"
     HORIZONTAL_BREAKPOINTS = [(0, "-compact"), (100, "-wide")]
     BINDINGS = [
         ("ctrl+r", "rerun", "Run"),
@@ -140,10 +296,12 @@ class PanContextApp(App[None]):
             with Vertical(id="experiment-controls", classes="panel"):
                 yield Static("EXPERIMENT SETUP", classes="panel-kicker")
                 yield Label("Experiment request", classes="field-label")
-                yield Input(
-                    id="experiment-path",
-                    placeholder="Path to a pancontext.experiment-request.v1 JSON file",
-                )
+                with Horizontal(classes="file-input-row"):
+                    yield Input(
+                        id="experiment-path",
+                        placeholder="Path to a haplux.experiment-request.v1 JSON file",
+                    )
+                    yield Button("Browse", id="browse-experiment")
                 with Horizontal(classes="button-row"):
                     yield Button("Run file", id="run-experiment", variant="primary")
                     yield Button("Load demo", id="load-demo", variant="default")
@@ -201,19 +359,23 @@ class PanContextApp(App[None]):
 
                 yield Static("1  INDEXED SOURCE FILES", classes="step-label")
                 yield Label("Reference FASTA  *", classes="field-label")
-                yield Input(
-                    id="real-fasta",
-                    placeholder="Path to reference.fa; reference.fa.fai must exist",
-                )
+                with Horizontal(classes="file-input-row"):
+                    yield Input(
+                        id="real-fasta",
+                        placeholder="Path to reference.fa; reference.fa.fai must exist",
+                    )
+                    yield Button("Browse", id="browse-fasta")
                 yield Static(
                     "Supplies the baseline DNA sequence for the requested interval.",
                     classes="field-help",
                 )
                 yield Label("Phased VCF or BCF  *", classes="field-label")
-                yield Input(
-                    id="real-vcf",
-                    placeholder="Path to cohort.vcf.gz; .tbi or .csi must exist",
-                )
+                with Horizontal(classes="file-input-row"):
+                    yield Input(
+                        id="real-vcf",
+                        placeholder="Path to cohort.vcf.gz; .tbi or .csi must exist",
+                    )
+                    yield Button("Browse", id="browse-vcf")
                 yield Static(
                     "Supplies sample genotypes and assigns alleles to haplotype 1 or 2.",
                     classes="field-help",
@@ -288,7 +450,7 @@ class PanContextApp(App[None]):
                     id="real-data-readiness",
                     classes="readiness incomplete",
                 )
-                yield Static("WHAT PANCONTEXT WILL DO", classes="section-label")
+                yield Static("WHAT HAPLUX WILL DO", classes="section-label")
                 yield Static(
                     "1. Fetch one reference window\n"
                     "2. Verify the focal REF allele\n"
@@ -365,7 +527,7 @@ class PanContextApp(App[None]):
             yield Static("WORKFLOW GUIDE", classes="panel-kicker")
             yield Static(
                 "[b]Experiment[/b]\n"
-                "Load a versioned JSON request or the bundled demo. PanContext constructs "
+                "Load a versioned JSON request or the bundled demo. Haplux constructs "
                 "matched REF/ALT inputs, scores both, and compares paired effects across "
                 "contexts.\n\n"
                 "[b]Context Inspector[/b]\n"
@@ -386,9 +548,10 @@ class PanContextApp(App[None]):
                 "[b]Keyboard[/b]\n"
                 "1 opens Experiment. 2 opens FASTA + VCF. 3 opens Context Inspector. "
                 "4 opens this guide. Ctrl+R reruns the active workflow. D restores the "
-                "bundled experiment. L loads the public lesson. Q quits.\n\n"
+                "bundled experiment. L loads the public lesson. Q quits. Browse buttons "
+                "open a terminal-native file tree; use arrows and Enter to select.\n\n"
                 "[b]Scientific boundary[/b]\n"
-                "Current scorers are development instruments. PanContext loads indexed "
+                "Current scorers are development instruments. Haplux loads indexed "
                 "linear FASTA/VCF input, but does not yet load GFA/GBZ or execute a "
                 "biological foundation model.",
                 id="guide-text",
@@ -408,7 +571,7 @@ class PanContextApp(App[None]):
         experiment_table.zebra_stripes = True
 
         coordinate_table = self.query_one("#coordinate-table", DataTable)
-        coordinate_table.add_columns("Field", "Input", "PanContext internal")
+        coordinate_table.add_columns("Field", "Input", "Haplux internal")
         coordinate_table.cursor_type = "row"
         coordinate_table.zebra_stripes = True
 
@@ -421,7 +584,9 @@ class PanContextApp(App[None]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
-        if button_id == "run-experiment":
+        if button_id in FILE_PICKERS:
+            self._open_file_picker(FILE_PICKERS[button_id])
+        elif button_id == "run-experiment":
             self.action_run_experiment_file()
         elif button_id == "load-demo":
             self.action_load_demo()
@@ -436,6 +601,39 @@ class PanContextApp(App[None]):
         elif button_id == "load-example":
             self._load_inspector_example()
             self._analyze_context()
+
+    def _open_file_picker(self, spec: FilePickerSpec) -> None:
+        field = self.query_one(f"#{spec.target_id}", Input)
+        start_path = self._file_picker_start_path(field.value)
+        self.push_screen(
+            FilePickerScreen(spec, start_path),
+            lambda selected, target_id=spec.target_id: self._apply_file_selection(
+                target_id, selected
+            ),
+        )
+
+    def _apply_file_selection(self, target_id: str, selected: Optional[str]) -> None:
+        if selected is None:
+            return
+        field = self.query_one(f"#{target_id}", Input)
+        field.value = selected
+        field.focus()
+
+    @staticmethod
+    def _file_picker_start_path(value: str) -> Path:
+        """Start near an existing typed path, falling back to the working directory."""
+
+        if not value.strip():
+            return Path.cwd().resolve()
+        candidate = Path(value.strip()).expanduser()
+        if not candidate.is_absolute():
+            candidate = Path.cwd() / candidate
+        candidate = candidate.resolve()
+        if candidate.is_file():
+            return candidate.parent
+        if candidate.is_dir():
+            return candidate
+        return next((parent for parent in candidate.parents if parent.is_dir()), Path.cwd())
 
     def on_input_changed(self, event: Input.Changed) -> None:
         """Keep the real-data preview synchronized with typed values."""
@@ -502,7 +700,7 @@ class PanContextApp(App[None]):
             status.remove_class("completed", "partial")
             status.add_class("error")
             status.update(
-                "Public lesson is not prepared. Exit PanContext, run "
+                "Public lesson is not prepared. Exit Haplux, run "
                 "'make public-lesson', then press L."
             )
             return
@@ -1239,6 +1437,6 @@ class PanContextApp(App[None]):
 
 
 def run() -> None:
-    """Launch the PanContext terminal application."""
+    """Launch the Haplux terminal application."""
 
-    PanContextApp().run()
+    HapluxApp().run()

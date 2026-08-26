@@ -1,28 +1,28 @@
-"""Command-line routing for interactive and headless PanContext workflows."""
+"""Command-line routing for interactive and headless Haplux workflows."""
 
 import argparse
 import json
 import sys
 from typing import List, Optional, Sequence
 
-from pancontext.analysis import (
+from haplux.analysis import (
     AnalysisRequest,
     ObservedAllele,
     SCHEMA_VERSION,
     analyze_variant,
 )
-from pancontext.context import ContextSource
-from pancontext.experiment import EXPERIMENT_SCHEMA_VERSION, FocalVariant, run_experiment
-from pancontext.experiment_io import load_experiment_file, parse_experiment_document
-from pancontext.fasta_vcf import FastaVcfProvider
-from pancontext.models import create_builtin_model
-from pancontext.providers import AnchorLocus, ContextQuery, WindowSpecification
-from pancontext.real_data import REAL_DATA_SCHEMA_VERSION, run_provider_experiment
+from haplux.context import ContextSource
+from haplux.experiment import EXPERIMENT_SCHEMA_VERSION, FocalVariant, run_experiment
+from haplux.experiment_io import load_experiment_file, parse_experiment_document
+from haplux.fasta_vcf import FastaVcfProvider
+from haplux.models import create_builtin_model
+from haplux.providers import AnchorLocus, ContextQuery, WindowSpecification
+from haplux.real_data import REAL_DATA_SCHEMA_VERSION, run_provider_experiment
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="pancontext",
+        prog="haplux",
         description="Audit genomic variant contexts interactively or headlessly.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -246,7 +246,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     arguments: List[str] = list(sys.argv[1:] if argv is None else argv)
     if not arguments:
-        from pancontext.tui import run
+        from haplux.tui import run
 
         run()
         return 0

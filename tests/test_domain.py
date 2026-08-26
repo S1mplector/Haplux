@@ -1,12 +1,12 @@
 import unittest
 
-from pancontext.context import (
+from haplux.context import (
     ContextSource,
     SequenceContext,
     SequenceProvenance,
     ga4gh_sequence_id,
 )
-from pancontext.domain import (
+from haplux.domain import (
     HaplotypeWindow,
     ReferenceMismatchError,
     SequenceValidationError,

@@ -7,7 +7,7 @@ def experiment_demo_document() -> Dict[str, Any]:
     """Return a fresh three-context experiment request for interactive exploration."""
 
     return {
-        "schema_version": "pancontext.experiment-request.v1",
+        "schema_version": "haplux.experiment-request.v1",
         "experiment": {
             "experiment_id": "three-haplotype-demo",
             "focal_variant": {

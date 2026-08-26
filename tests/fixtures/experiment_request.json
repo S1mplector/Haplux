@@ -1,5 +1,5 @@
 {
-  "schema_version": "pancontext.experiment-request.v1",
+  "schema_version": "haplux.experiment-request.v1",
   "experiment": {
     "experiment_id": "two-haplotype-demo",
     "focal_variant": {

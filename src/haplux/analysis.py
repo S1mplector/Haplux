@@ -1,6 +1,6 @@
 """Deterministic, UI-independent variant context analysis.
 
-This module is the application boundary for PanContext's current milestone. User
+This module is the application boundary for Haplux's current milestone. User
 interfaces collect an :class:`AnalysisRequest` and render an :class:`AnalysisResult`;
 all scientific validation and result construction happens here and is headlessly
 testable.
@@ -10,16 +10,16 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional, Tuple
 
-from pancontext.context import (
+from haplux.context import (
     ContextSource,
     SequenceContext,
     SequenceProvenance,
     ga4gh_sequence_id,
 )
-from pancontext.domain import HaplotypeWindow, Variant
+from haplux.domain import HaplotypeWindow, Variant
 
 
-SCHEMA_VERSION = "pancontext.analysis.v1"
+SCHEMA_VERSION = "haplux.analysis.v1"
 CoordinateRow = Tuple[str, str, str]
 
 

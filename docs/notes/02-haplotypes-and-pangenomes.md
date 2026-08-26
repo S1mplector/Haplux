@@ -32,10 +32,10 @@ A **pangenome** represents sequence from multiple genomes. A graph pangenome com
 
 Different haplotypes can share most nodes and diverge only where their sequences differ.
 
-## Why this matters to PanContext
+## Why this matters to Haplux
 
 A genomic model usually receives a local sequence window. If we always construct that
-window from one linear reference, the model sees only one surrounding context. PanContext
+window from one linear reference, the model sees only one surrounding context. Haplux
 will instead place the same focal variant into multiple compatible haplotype paths and ask:
 
 ```text

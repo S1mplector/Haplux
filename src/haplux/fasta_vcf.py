@@ -11,11 +11,11 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import pysam
 
-from pancontext.analysis import ObservedAllele
-from pancontext.context import ContextSource
-from pancontext.domain import DNA_ALPHABET
-from pancontext.experiment import ExperimentContext
-from pancontext.providers import (
+from haplux.analysis import ObservedAllele
+from haplux.context import ContextSource
+from haplux.domain import DNA_ALPHABET
+from haplux.experiment import ExperimentContext
+from haplux.providers import (
     ContextQuery,
     ProviderBatch,
     ProviderIssue,

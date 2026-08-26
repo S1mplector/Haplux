@@ -1,6 +1,6 @@
 """Core domain objects for sequence windows and small variants.
 
-PanContext accepts familiar 1-based VCF positions at its input boundary, then
+Haplux accepts familiar 1-based VCF positions at its input boundary, then
 uses 0-based, half-open interbase coordinates internally. Keeping that invariant
 in one place prevents silent off-by-one errors in later graph and model code.
 """

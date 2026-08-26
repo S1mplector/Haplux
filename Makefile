@@ -3,7 +3,7 @@ PYTHON ?= .venv/bin/python
 .PHONY: run test check analyze-example experiment-example real-data-example public-lesson
 
 run:
-	PYTHONPATH=src $(PYTHON) -m pancontext
+	PYTHONPATH=src $(PYTHON) -m haplux
 
 test:
 	PYTHONPATH=src $(PYTHON) -m unittest discover -s tests -v
@@ -14,7 +14,7 @@ check:
 	$(PYTHON) -m pip check
 
 analyze-example:
-	PYTHONPATH=src $(PYTHON) -m pancontext analyze \
+	PYTHONPATH=src $(PYTHON) -m haplux analyze \
 		--source-type linear_reference \
 		--source-name GRCh38 \
 		--sequence-id chr1 \
@@ -26,7 +26,7 @@ analyze-example:
 		--pretty
 
 experiment-example:
-	PYTHONPATH=src $(PYTHON) -m pancontext experiment \
+	PYTHONPATH=src $(PYTHON) -m haplux experiment \
 		--input tests/fixtures/experiment_request.json \
 		--pretty
 
@@ -34,7 +34,7 @@ real-data-example:
 	@fixture_dir="$$(mktemp -d)"; \
 	trap 'rm -rf "$$fixture_dir"' EXIT; \
 	$(PYTHON) -c 'import pysam; pysam.tabix_compress("tests/fixtures/cohort.vcf", "'"$$fixture_dir"'/cohort.vcf.gz", force=True); pysam.tabix_index("'"$$fixture_dir"'/cohort.vcf.gz", preset="vcf", force=True)'; \
-	PYTHONPATH=src $(PYTHON) -m pancontext vcf-experiment \
+	PYTHONPATH=src $(PYTHON) -m haplux vcf-experiment \
 		--fasta tests/fixtures/mini.fa \
 		--vcf "$$fixture_dir/cohort.vcf.gz" \
 		--assembly mini-v1 \
