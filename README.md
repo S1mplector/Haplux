@@ -84,6 +84,10 @@ length and maximum context count, reconstructs haplotypes, and sends successful 
 Experiment dashboard. The inspector validates one projected sequence window and is useful
 for debugging provider output.
 
+In the Experiment workspace, focus the paired-effects table and move with the arrow keys.
+The selected-context panel shows that chromosome copy's provenance, locus, observed allele,
+matched REF/ALT sequence change, scores, and effect without rerunning the experiment.
+
 In the inspector, the VCF position field is 1-based. Window starts and all internal
 coordinates are 0-based interbase coordinates; the result panel makes that conversion
 visible.

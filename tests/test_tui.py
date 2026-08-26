@@ -343,6 +343,29 @@ class PanContextAppTests(unittest.IsolatedAsyncioTestCase):
             self.assertIn("tested contexts", insight)
             self.assertEqual(len(table.columns), 6)
 
+    async def test_highlighted_experiment_row_updates_context_detail(self) -> None:
+        app = PanContextApp()
+
+        async with app.run_test(size=(140, 45)) as pilot:
+            table = app.query_one("#experiment-table", DataTable)
+            detail = app.query_one("#context-detail", Static)
+
+            first_lines = [line.plain for line in detail.content.renderables]
+            self.assertIn("HG001", first_lines[0])
+            self.assertEqual(first_lines[-2], "REF  AACCGG")
+            self.assertEqual(first_lines[-1], "ALT  AATCGG")
+
+            table.focus()
+            await pilot.press("down")
+            await pilot.pause()
+
+            second_lines = [line.plain for line in detail.content.renderables]
+            self.assertEqual(table.cursor_row, 1)
+            self.assertIn("HG002", second_lines[0])
+            self.assertIn("observed alternate", second_lines[1])
+            self.assertEqual(second_lines[-2], "REF  GGAACCGG")
+            self.assertEqual(second_lines[-1], "ALT  GGAATCGG")
+
 
 if __name__ == "__main__":
     unittest.main()

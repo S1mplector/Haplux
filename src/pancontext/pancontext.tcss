@@ -366,8 +366,17 @@ DataTable:focus > .datatable--cursor {
 
 #experiment-table {
     height: 1fr;
-    min-height: 10;
+    min-height: 8;
     margin-bottom: 1;
+    border: round #3d3f44;
+}
+
+#context-detail {
+    height: 9;
+    padding: 1 2;
+    margin-bottom: 1;
+    color: #d1d2d4;
+    background: #101113;
     border: round #3d3f44;
 }
 

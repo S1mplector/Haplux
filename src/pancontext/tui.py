@@ -26,7 +26,7 @@ from textual.widgets import (
 from pancontext.analysis import AnalysisRequest, AnalysisResult, analyze_variant
 from pancontext.context import ContextSource
 from pancontext.demo import experiment_demo_document
-from pancontext.experiment import ExperimentResult, FocalVariant, run_experiment
+from pancontext.experiment import ContextEffect, ExperimentResult, FocalVariant, run_experiment
 from pancontext.experiment_io import (
     ParsedExperiment,
     load_experiment_file,
@@ -175,10 +175,10 @@ class PanContextApp(App[None]):
                 )
                 yield Static("PAIRED CONTEXT EFFECTS", classes="section-label")
                 yield DataTable(id="experiment-table")
+                yield Static("SELECTED CONTEXT", classes="section-label")
                 yield Static(
-                    "Each row compares matched sequences from one chromosome copy. "
-                    "Effect = ALT score - REF score.",
-                    classes="table-help",
+                    "Select a result row to inspect its matched REF and ALT sequences.",
+                    id="context-detail",
                 )
                 yield Static("No skipped contexts.", id="skipped-contexts")
 
@@ -381,7 +381,8 @@ class PanContextApp(App[None]):
                 "Each sample has up to two haplotype copies. REF score and ALT score are "
                 "computed on matched versions of the same reconstructed copy. Effect is "
                 "ALT minus REF; the range tells you how much that effect changes across "
-                "the tested sequence backgrounds.\n\n"
+                "the tested sequence backgrounds. Focus the effects table and use the "
+                "arrow keys to inspect each copy's sequence change below it.\n\n"
                 "[b]Keyboard[/b]\n"
                 "1 opens Experiment. 2 opens FASTA + VCF. 3 opens Context Inspector. "
                 "4 opens this guide. Ctrl+R reruns the active workflow. D restores the "
@@ -456,6 +457,12 @@ class PanContextApp(App[None]):
         )
         motif_label.set_class(motif_required, "required-field")
         self._refresh_real_data_readiness()
+
+    def on_data_table_row_highlighted(self, event: DataTable.RowHighlighted) -> None:
+        """Explain the highlighted paired effect without rerunning analysis."""
+
+        if event.data_table.id == "experiment-table":
+            self._render_context_detail(event.cursor_row)
 
     def action_show_experiment(self) -> None:
         self.query_one("#main-tabs", TabbedContent).active = "experiment-tab"
@@ -647,6 +654,9 @@ class PanContextApp(App[None]):
             )
             for effect in result.effects
         )
+        if result.effects:
+            table.move_cursor(row=0, column=0, animate=False)
+            self._render_context_detail(0)
 
         skipped = self.query_one("#skipped-contexts", Static)
         if not result.skipped_contexts:
@@ -681,6 +691,9 @@ class PanContextApp(App[None]):
             "No interpretation is available because the experiment did not run."
         )
         self.query_one("#experiment-table", DataTable).clear(columns=False)
+        self.query_one("#context-detail", Static).update(
+            "No context is available because the experiment did not run."
+        )
         self.query_one("#skipped-contexts", Static).update("No experiment results.")
 
     def _stability_interpretation(self, result: ExperimentResult) -> str:
@@ -703,6 +716,113 @@ class PanContextApp(App[None]):
         return (
             f"[b]Interpretation[/b]  {conclusion}\n{directions} "
             "These are descriptive results for the tested contexts, not a clinical claim."
+        )
+
+    def _render_context_detail(self, row: int) -> None:
+        result = self._experiment_result
+        if result is None or row < 0 or row >= len(result.effects):
+            self.query_one("#context-detail", Static).update(
+                "Select a result row to inspect its matched REF and ALT sequences."
+            )
+            return
+        self.query_one("#context-detail", Static).update(
+            self._context_effect_detail(result.effects[row])
+        )
+
+    @classmethod
+    def _context_effect_detail(cls, effect: ContextEffect) -> Group:
+        sample = effect.sample_id or effect.context_id
+        haplotype = effect.haplotype_id or "not specified"
+        provenance = Text()
+        provenance.append(sample, style="bold #f0f0f1")
+        provenance.append(f"  |  copy {haplotype}  |  ")
+        provenance.append(effect.source_type.label)
+        provenance.append(f"  |  {effect.source_name}")
+
+        locus = Text(
+            f"{effect.sequence_id}:{effect.vcf_position}  |  "
+            f"observed {effect.observed_allele.value}  |  "
+            f"{len(effect.baseline_sequence)} bp REF / "
+            f"{len(effect.alternate_sequence)} bp ALT",
+            style="#aeb0b4",
+        )
+        scores = Text("Scores  ", style="bold #aeb0b4")
+        scores.append(cls._format_score(effect.baseline_score))
+        scores.append(" REF  ->  ")
+        scores.append(cls._format_score(effect.alternate_score))
+        scores.append(" ALT  |  effect ")
+        scores.append(cls._format_score(effect.effect), style="bold #f0f0f1")
+        reference, alternate = cls._paired_sequence_preview(effect)
+        return Group(provenance, locus, scores, reference, alternate)
+
+    @staticmethod
+    def _paired_sequence_preview(effect: ContextEffect) -> Tuple[Text, Text]:
+        baseline = effect.baseline_sequence
+        alternate = effect.alternate_sequence
+        prefix = 0
+        shared_limit = min(len(baseline), len(alternate))
+        while prefix < shared_limit and baseline[prefix] == alternate[prefix]:
+            prefix += 1
+
+        suffix = 0
+        baseline_remaining = len(baseline) - prefix
+        alternate_remaining = len(alternate) - prefix
+        while (
+            suffix < baseline_remaining
+            and suffix < alternate_remaining
+            and baseline[-suffix - 1] == alternate[-suffix - 1]
+        ):
+            suffix += 1
+
+        baseline_end = len(baseline) - suffix
+        alternate_end = len(alternate) - suffix
+        flank = 28
+        left_start = max(0, prefix - flank)
+        baseline_right_end = min(len(baseline), baseline_end + flank)
+        alternate_right_end = min(len(alternate), alternate_end + flank)
+
+        def build_line(
+            label: str,
+            sequence: str,
+            change_end: int,
+            right_end: int,
+            *,
+            alternate_style: bool,
+        ) -> Text:
+            line = Text(f"{label:<5}", style="bold #a7a9ad")
+            if left_start:
+                line.append("...")
+            line.append(sequence[left_start:prefix])
+            changed = sequence[prefix:change_end]
+            if changed:
+                style = (
+                    "bold #111214 on #d5d6d8"
+                    if alternate_style
+                    else "bold #f2f2f2 on #4d4f54"
+                )
+                line.append(changed, style=style)
+            else:
+                line.append("-", style="bold #a7a9ad")
+            line.append(sequence[change_end:right_end])
+            if right_end < len(sequence):
+                line.append("...")
+            return line
+
+        return (
+            build_line(
+                "REF",
+                baseline,
+                baseline_end,
+                baseline_right_end,
+                alternate_style=False,
+            ),
+            build_line(
+                "ALT",
+                alternate,
+                alternate_end,
+                alternate_right_end,
+                alternate_style=True,
+            ),
         )
 
     def action_run_real_data(self) -> None:
