@@ -61,6 +61,28 @@ class ExperimentInputTests(unittest.TestCase):
         self.assertEqual(document, original)
         self.assertEqual(document["schema_version"], EXPERIMENT_REQUEST_SCHEMA_VERSION)
 
+    def test_parses_optional_model_input_policy(self) -> None:
+        document = fixture_document()
+        document["model"]["input_policy"] = {
+            "kind": "fixed_length_centered",
+            "parameters": {
+                "target_length": 3,
+                "anchor_index": 1,
+            },
+        }
+
+        parsed = parse_experiment_document(document)
+        result = run_experiment(parsed.request, parsed.model)
+
+        self.assertEqual(
+            parsed.model.metadata()["input_policy"]["policy"],
+            "fixed_length_centered",
+        )
+        self.assertEqual(
+            result.as_dict()["contexts"][0]["model_inputs"]["baseline"]["model_sequence"],
+            "ACC",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

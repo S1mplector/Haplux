@@ -7,9 +7,9 @@ from statistics import fmean, pstdev
 from typing import Any, Dict, Optional, Tuple
 
 from haplux.analysis import AnalysisRequest, ObservedAllele, analyze_variant
-from haplux.context import ContextSource
+from haplux.context import ContextSource, ga4gh_sequence_id
 from haplux.domain import SequenceValidationError, Variant
-from haplux.models import ModelValidationError, ScalarModelAdapter
+from haplux.models import ModelValidationError, ScalarModelAdapter, model_input_policy
 
 
 EXPERIMENT_SCHEMA_VERSION = "haplux.experiment.v1"
@@ -116,6 +116,12 @@ class ContextEffect:
     alternate_content_id: str
     baseline_construction: str
     alternate_construction: str
+    baseline_model_sequence: str
+    alternate_model_sequence: str
+    baseline_model_content_id: str
+    alternate_model_content_id: str
+    baseline_input_projection: Dict[str, Any]
+    alternate_input_projection: Dict[str, Any]
     baseline_score: float
     alternate_score: float
 
@@ -145,12 +151,18 @@ class ContextEffect:
                     "sequence": self.baseline_sequence,
                     "content_id": self.baseline_content_id,
                     "construction": self.baseline_construction,
+                    "model_sequence": self.baseline_model_sequence,
+                    "model_content_id": self.baseline_model_content_id,
+                    "input_projection": self.baseline_input_projection,
                     "score": self.baseline_score,
                 },
                 "alternate": {
                     "sequence": self.alternate_sequence,
                     "content_id": self.alternate_content_id,
                     "construction": self.alternate_construction,
+                    "model_sequence": self.alternate_model_sequence,
+                    "model_content_id": self.alternate_model_content_id,
+                    "input_projection": self.alternate_input_projection,
                     "score": self.alternate_score,
                 },
             },
@@ -286,7 +298,9 @@ def run_experiment(
 ) -> ExperimentResult:
     """Construct paired inputs, score them, and summarize effects across contexts."""
 
-    model_metadata = model.metadata()
+    policy = model_input_policy(model)
+    model_metadata = dict(model.metadata())
+    model_metadata.setdefault("input_policy", policy.metadata())
     try:
         json.dumps(model_metadata, allow_nan=False)
     except (TypeError, ValueError) as error:
@@ -327,8 +341,17 @@ def run_experiment(
             continue
 
         try:
-            baseline_score = float(model.predict(analysis.baseline_sequence))
-            alternate_score = float(model.predict(analysis.alternate_sequence))
+            focal_offset = analysis.variant.start - analysis.context.window.start
+            baseline_input = policy.prepare(
+                analysis.baseline_sequence,
+                focal_offset=focal_offset,
+            )
+            alternate_input = policy.prepare(
+                analysis.alternate_sequence,
+                focal_offset=focal_offset,
+            )
+            baseline_score = float(model.predict(baseline_input.sequence))
+            alternate_score = float(model.predict(alternate_input.sequence))
             if not isfinite(baseline_score) or not isfinite(alternate_score):
                 raise ModelValidationError("model predictions must be finite")
         except ValueError as error:
@@ -358,6 +381,12 @@ def run_experiment(
                 alternate_content_id=analysis.alternate_content_id,
                 baseline_construction=analysis.baseline_construction,
                 alternate_construction=analysis.alternate_construction,
+                baseline_model_sequence=baseline_input.sequence,
+                alternate_model_sequence=alternate_input.sequence,
+                baseline_model_content_id=ga4gh_sequence_id(baseline_input.sequence),
+                alternate_model_content_id=ga4gh_sequence_id(alternate_input.sequence),
+                baseline_input_projection=baseline_input.as_dict(),
+                alternate_input_projection=alternate_input.as_dict(),
                 baseline_score=baseline_score,
                 alternate_score=alternate_score,
             )

@@ -1,0 +1,166 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Haplux: Reference-Neutral Auditing of Genomic Model Stability Across Haplotype Contexts}
+\author{Ilgaz Mehmetoglu}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Haplux is an early-stage research system for testing whether a genomic model's
+prediction for the same focal variant is stable across different human haplotype
+backgrounds. The central object of study is a paired effect,
+\[
+  \Delta_h = f(x_{h,\mathrm{ALT}}) - f(x_{h,\mathrm{REF}}),
+\]
+where both model inputs are constructed within the same local haplotype context
+\(h\). Haplux aims to make this comparison reproducible by separating source
+provenance, coordinate handling, haplotype reconstruction, model input policy,
+and effect summarization. The first intended research contribution is not a new
+predictive model, but an auditing framework for measuring when existing models
+produce context-dependent variant effects.
+\end{abstract}
+
+\section{Motivation}
+
+Genomic prediction models are commonly queried by replacing a reference allele
+with an alternate allele inside a reference-derived sequence window. That
+workflow is simple, but it can hide an assumption: the measured effect may depend
+on the surrounding haplotype background used to construct the sequence. If nearby
+variants, indels, phase, or ancestry-associated sequence backgrounds alter model
+inputs, then a single reference-context effect can understate uncertainty or
+misrepresent the range of model behavior.
+
+Haplux investigates this problem by treating the focal variant effect as a
+paired, context-indexed quantity. The same REF and ALT allele states are compared
+within each compatible haplotype, and stability is summarized across those
+paired effects.
+
+\section{Research Question}
+
+The primary research question is:
+
+\begin{quote}
+For a fixed focal variant and a fixed genomic prediction model, how stable is the
+model's predicted REF-to-ALT effect across compatible human haplotype contexts?
+\end{quote}
+
+This decomposes into several operational questions:
+
+\begin{itemize}
+  \item Which haplotype contexts are compatible with a focal variant query?
+  \item How should local REF and ALT model inputs be constructed when either
+        allele may already be observed on a source haplotype?
+  \item How much of the predicted effect variation is attributable to nearby
+        sequence context rather than to the focal allele alone?
+  \item Which model input policies, such as fixed-length centering or padding,
+        change the measured stability?
+  \item Can context-dependent model behavior be reported without making clinical
+        interpretation claims?
+\end{itemize}
+
+\section{Current System}
+
+The current Haplux prototype establishes the following technical base:
+
+\begin{itemize}
+  \item a 0-based half-open internal coordinate convention with VCF-style
+        1-based input conversion;
+  \item validation that declared reference alleles match the supplied sequence;
+  \item construction of matched REF and ALT inputs when either allele is
+        observed in the supplied haplotype;
+  \item source provenance for linear references, phased VCF haplotypes,
+        pangenome paths, de novo assemblies, and raw sequence inputs;
+  \item GA4GH refget-style sequence content identifiers for constructed model
+        inputs;
+  \item a provider boundary that reconstructs local diploid haplotypes from
+        indexed FASTA and phased VCF or BCF files;
+  \item deterministic development scorers used to test paired-effect mechanics;
+  \item strict, versioned JSON reports for headless and interactive workflows.
+\end{itemize}
+
+\section{Methodological Direction}
+
+Haplux should improve variant-effect analysis by making the following quantities
+explicit and machine-readable:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+Quantity & Purpose \\
+\midrule
+Source provenance & Records where each context came from. \\
+Sequence content identity & Detects when distinct sources yield identical inputs. \\
+Observed allele state & Distinguishes observed and constructed REF/ALT inputs. \\
+Model input policy & Records trimming, centering, padding, and fixed-length rules. \\
+Paired effect & Compares ALT and REF inside the same haplotype context. \\
+Stability summary & Reports spread, sign agreement, and skipped contexts. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The near-term methodological improvement is to move from toy scorers to real
+model adapters while preserving this audit trail. Each adapter should declare
+its input policy, model identity, output target, software version, and failure
+mode. Fixed-length models are especially important because trimming and padding
+can change the local sequence seen by the model.
+
+\section{Hypotheses}
+
+Haplux can be used to test the following working hypotheses:
+
+\begin{enumerate}
+  \item Some focal variants have model effects whose sign or magnitude changes
+        across valid haplotype contexts.
+  \item Nearby phased variants and indels explain part of this effect spread.
+  \item Fixed-length model input policies can introduce measurable differences
+        in paired effects, especially near window boundaries and indels.
+  \item Context-stability summaries provide useful uncertainty signals that are
+        absent from single-reference-context variant scoring.
+\end{enumerate}
+
+\section{Evaluation Plan}
+
+A practical evaluation should proceed in stages:
+
+\begin{enumerate}
+  \item Validate coordinate and allele handling on synthetic fixtures with known
+        expected sequences.
+  \item Reconstruct phased haplotypes at compact public-data loci and compare
+        paired effects across chromosome copies.
+  \item Add at least one real sequence model adapter with a documented
+        fixed-length input policy.
+  \item Compare reference-only effects against multi-haplotype effect
+        distributions.
+  \item Report effect range, standard deviation, sign agreement, skipped-context
+        reasons, and model-input content identifiers.
+\end{enumerate}
+
+\section{Boundaries}
+
+Haplux is research software. It should not provide clinical interpretation,
+diagnosis, or patient-specific recommendations. Early claims should be limited
+to reproducible model auditing: whether a model's predicted variant effect is
+stable across compatible haplotype contexts under a stated model input policy.
+
+\section{Next Improvements}
+
+The next implementation milestones are:
+
+\begin{enumerate}
+  \item expand the model adapter contract for real inference backends;
+  \item formalize fixed-length sequence policies in experiment request schemas;
+  \item add normalization and left-alignment for VCF alleles;
+  \item resolve overlapping or compound nearby variants without silent guessing;
+  \item support cohort-scale batching across focal variants;
+  \item add richer context-attribution summaries once model outputs are real.
+\end{enumerate}
+
+\end{document}

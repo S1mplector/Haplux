@@ -12,7 +12,7 @@ from haplux.experiment import (
     StabilitySummary,
     run_experiment,
 )
-from haplux.models import GCContentModel
+from haplux.models import FixedLengthCenteredPolicy, GCContentModel
 
 
 class NonFiniteModel:
@@ -119,6 +119,35 @@ class ExperimentEngineTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertEqual(result.skipped_contexts[0].stage, "model-inference")
         self.assertIn("finite", result.skipped_contexts[0].reason)
+
+    def test_scores_policy_projected_model_inputs(self) -> None:
+        request = experiment_request(context("HG001-1"))
+        model = GCContentModel(
+            input_policy=FixedLengthCenteredPolicy(target_length=3, anchor_index=1)
+        )
+
+        result = run_experiment(request, model)
+        effect = result.effects[0]
+        report = result.as_dict()
+
+        self.assertEqual(effect.baseline_sequence, "AACCGG")
+        self.assertEqual(effect.alternate_sequence, "AATCGG")
+        self.assertEqual(effect.baseline_model_sequence, "ACC")
+        self.assertEqual(effect.alternate_model_sequence, "ATC")
+        self.assertAlmostEqual(effect.baseline_score, 2 / 3)
+        self.assertAlmostEqual(effect.alternate_score, 1 / 3)
+        self.assertAlmostEqual(effect.effect, -1 / 3)
+        self.assertEqual(report["model"]["input_policy"]["policy"], "fixed_length_centered")
+        self.assertEqual(
+            report["contexts"][0]["model_inputs"]["baseline"]["input_projection"][
+                "source_interval"
+            ],
+            {
+                "start": 1,
+                "end": 4,
+                "coordinate_system": "0-based-half-open-sequence-offset",
+            },
+        )
 
     def test_serializes_versioned_experiment_report(self) -> None:
         result = run_experiment(experiment_request(context("HG001-1")), GCContentModel())

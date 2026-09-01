@@ -33,6 +33,7 @@ The suite currently covers:
 - keyboard-triggered analysis through `Ctrl+R`;
 - REF-observed and ALT-observed counterfactual construction;
 - deterministic model adapters and invalid model outputs;
+- full-sequence and fixed-length centered model input policies;
 - completed, partial, and failed multi-context experiments;
 - paired-effect stability statistics;
 - strict experiment request parsing with precise field paths;
@@ -80,8 +81,8 @@ failure correctly.
 ## Not implemented yet
 
 No current test implies support for GFA, GBZ, automatic variant normalization, biological
-model inference, or homology resolution. Those capabilities must arrive with fixtures and
-headless conformance tests.
+model inference, model-specific tokenization, or homology resolution. Those capabilities
+must arrive with fixtures and headless conformance tests.
 
 The requirements for the first such fixture suite are defined in
 [`real-data-readiness.md`](real-data-readiness.md).

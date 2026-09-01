@@ -54,6 +54,8 @@ The current prototype can:
 - reconstruct local diploid haplotypes from indexed FASTA and phased VCF/BCF input;
 - apply supported nearby variants before locating the focal allele on each haplotype;
 - retain provider exclusions and input identities in a versioned real-data report.
+- apply an explicit model-input policy before scoring, including full-sequence and
+  fixed-length centered projections.
 
 ## Run the TUI
 
@@ -130,7 +132,8 @@ Or invoke it directly:
 ```
 
 The GC-content and motif-count adapters are deterministic development instruments, not
-biological models.
+biological models. Experiment JSON may optionally declare a model `input_policy`; omitted
+policies default to the complete constructed REF/ALT sequence.
 
 ## Run indexed FASTA/VCF data
 

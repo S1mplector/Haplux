@@ -75,4 +75,4 @@ None of these may be hidden as an undocumented default.
 - contig alias maps and reverse-strand projection;
 - graph formats such as GFA/GBZ and assembly-to-assembly homology mapping;
 - cohort-scale batching across many focal variants;
-- production biological model adapters and fixed-length tokenization policies.
+- production biological model adapters and richer model-specific tokenization policies.

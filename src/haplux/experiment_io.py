@@ -12,7 +12,7 @@ from haplux.experiment import (
     ExperimentValidationError,
     FocalVariant,
 )
-from haplux.models import ScalarModelAdapter, create_builtin_model
+from haplux.models import ScalarModelAdapter, create_builtin_model, create_input_policy
 
 
 EXPERIMENT_REQUEST_SCHEMA_VERSION = "haplux.experiment-request.v1"
@@ -233,7 +233,11 @@ def parse_experiment_document(document: Any) -> ParsedExperiment:
         _required(root, "model", path="document"),
         path="document.model",
     )
-    _reject_unknown(model_data, ("adapter", "parameters"), path="document.model")
+    _reject_unknown(
+        model_data,
+        ("adapter", "parameters", "input_policy"),
+        path="document.model",
+    )
     adapter = _string(
         _required(model_data, "adapter", path="document.model"),
         path="document.model.adapter",
@@ -242,7 +246,30 @@ def parse_experiment_document(document: Any) -> ParsedExperiment:
         model_data.get("parameters", {}),
         path="document.model.parameters",
     )
-    model = create_builtin_model(adapter, parameters)
+    policy_data = model_data.get("input_policy")
+    input_policy = None
+    if policy_data is not None:
+        policy_mapping = _mapping(policy_data, path="document.model.input_policy")
+        _reject_unknown(
+            policy_mapping,
+            ("kind", "parameters"),
+            path="document.model.input_policy",
+        )
+        input_policy = create_input_policy(
+            _string(
+                _required(
+                    policy_mapping,
+                    "kind",
+                    path="document.model.input_policy",
+                ),
+                path="document.model.input_policy.kind",
+            ),
+            _mapping(
+                policy_mapping.get("parameters", {}),
+                path="document.model.input_policy.parameters",
+            ),
+        )
+    model = create_builtin_model(adapter, parameters, input_policy=input_policy)
     return ParsedExperiment(request=request, model=model)
 
 
